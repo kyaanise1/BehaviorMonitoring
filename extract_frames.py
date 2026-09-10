@@ -72,3 +72,7 @@ cap.release()
 print("\nExtraction complete!")
 print("Total images:", image_count)
 print(f"Frame numbering: frame_{start_number:05d}.jpg onwards")
+
+
+#cd labelImg-master
+#python labelImg.py
