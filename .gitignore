@@ -1,0 +1,17 @@
+# Video files
+*.mkv
+*.mp4
+*.avi
+*.mov
+
+# Extracted frames/images
+frames/
+images/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
