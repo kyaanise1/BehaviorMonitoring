@@ -74,5 +74,5 @@ print("Total images:", image_count)
 print(f"Frame numbering: frame_{start_number:05d}.jpg onwards")
 
 
-#pip install labelImg
-#labelimg
+#cd labelImg-master
+#python labelImg.py
