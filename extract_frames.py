@@ -2,7 +2,7 @@ import cv2
 import os
 
 # Input video
-video_path = r"C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day_05_2026-08-31_1000_to_1100.mkv"
+video_path = r"C:\Users\Jush\BehaviorMonitoring\Videosamanok\Day_08_2026-09-04_1300_to_1400.mkv"
 
 # Folder where extracted images will be saved
 output_folder = "extracted_frames"
@@ -29,7 +29,7 @@ print("Duration:", duration / 3600, "hours")
 interval = 5
 
 # Day number
-day_number = 5  # Change this to the appropriate day number
+day_number = 8  # Change this to the appropriate day number
 
 # Starting frame number for this day
 start_number = day_number * 1000
