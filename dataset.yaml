@@ -1,0 +1,8 @@
+path: C:/Users/Jush/BehaviorMonitoring
+train: train.txt
+val: train.txt
+
+names:
+  0: broiler
+  1: inactive
+  2: huddling
