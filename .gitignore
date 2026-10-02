@@ -4,10 +4,6 @@
 *.avi
 *.mov
 
-# Extracted frames/images
-frames/
-images/
-
 # Python cache
 __pycache__/
 *.pyc
@@ -19,8 +15,4 @@ labelimg-env/
 .opencode
 
 # Model files
-extracted_frames/
 dataset/dataset.yaml
-runs/
-*.pt
-*.onnx
