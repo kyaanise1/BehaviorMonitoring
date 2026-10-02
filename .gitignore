@@ -17,3 +17,6 @@ venv/
 .venv/
 labelimg-env/
 .opencode
+
+dataset.yaml
+
