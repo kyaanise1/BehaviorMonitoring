@@ -18,14 +18,8 @@ venv/
 labelimg-env/
 .opencode
 
-<<<<<<< HEAD
-dataset.yaml
-
-=======
 # Model files
 extracted_frames/
-dataset/
 runs/
 *.pt
 *.onnx
->>>>>>> aa2de558b2e2f87a0e513c85c7e3ec976bcb60b9
