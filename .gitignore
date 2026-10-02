@@ -17,3 +17,10 @@ venv/
 .venv/
 labelimg-env/
 .opencode
+
+# Model files
+extracted_frames/
+dataset/
+runs/
+*.pt
+*.onnx
