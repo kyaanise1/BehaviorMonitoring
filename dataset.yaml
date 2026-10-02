@@ -1,0 +1,7 @@
+path: D:/Frijiel Magpulong/Documents/USTP/Thesis/Data Gathering/BehaviorMonitoring/dataset
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: broiler
