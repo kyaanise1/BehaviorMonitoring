@@ -20,7 +20,7 @@ labelimg-env/
 
 # Model files
 extracted_frames/
-dataset/
+dataset/dataset.yaml
 runs/
 *.pt
 *.onnx
