@@ -1,0 +1,6 @@
+path: C:/Users/Jush/BehaviorMonitoring
+train: images
+val: images
+
+names:
+  0: broiler
