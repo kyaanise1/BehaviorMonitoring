@@ -1,8 +1,16 @@
 """Shared helpers: low-rate frame sampling for video files and live streams."""
 import time
 import cv2
+import os, glob
 
-
+def sample_frames(source, interval_s=2.0, live=False):
+    if os.path.isdir(source):
+        paths = sorted(glob.glob(os.path.join(source, "*.jpg")) +
+                       glob.glob(os.path.join(source, "*.png")))
+        for n, p in enumerate(paths, start=1):
+            yield (n - 1) * interval_s, n, cv2.imread(p)
+        return
+    
 def sample_frames(source, interval_s=2.0, live=False):
     """Yield (t_seconds, sample_number, frame), one frame every interval_s.
 
