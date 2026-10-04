@@ -1,7 +1,8 @@
 """Shared helpers: low-rate frame sampling for video files and live streams."""
+import glob
+import os
 import time
 import cv2
-import os, glob
 
 def sample_frames(source, interval_s=2.0, live=False):
     if os.path.isdir(source):
@@ -18,6 +19,16 @@ def sample_frames(source, interval_s=2.0, live=False):
     Live mode : t is seconds since start; the stream is read continuously so
                 the buffer never goes stale, and one frame is kept per interval.
     """
+    # Folder of still frames: one frame per interval, in sorted filename order
+    if os.path.isdir(str(source)):
+        paths = sorted(glob.glob(os.path.join(source, "*.jpg")) +
+                       glob.glob(os.path.join(source, "*.png")))
+        if not paths:
+            raise RuntimeError(f"No .jpg/.png images found in {source}")
+        for n, p in enumerate(paths, start=1):
+            yield (n - 1) * interval_s, n, cv2.imread(p)
+        return
+    
     src = int(source) if str(source).isdigit() else source
     cap = cv2.VideoCapture(src)
     if not cap.isOpened():

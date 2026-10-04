@@ -7,6 +7,7 @@ Step 1: annotate a short clip with consistent IDs (e.g. in CVAT, export "MOT 1.1
         1-based frame numbers), so gt.txt frame N == sample N.
 Step 2: generate predictions with the exact tracker settings under test:
         python eval_tracking.py predict --source clip.mkv --out pred.txt
+        python eval_tracking.py predict --source clip.mkv --tracker-type centroid --out pred_centroid.txt
 Step 3: score:
         python eval_tracking.py score --gt gt.txt --pred pred.txt
 
@@ -17,24 +18,26 @@ import argparse
 
 import numpy as np
 
+# motmetrics still calls np.asfarray, which NumPy 2.0 removed
+if not hasattr(np, "asfarray"):
+    np.asfarray = lambda a, dtype=float: np.asarray(a, dtype=dtype)
+
+    
+from tracker import add_tracker_args, make_runner
+
 
 def predict(args):
     from ultralytics import YOLO
     from common import sample_frames
 
     model = YOLO(args.weights, task="detect")
+    track = make_runner(args, model)          # ByteTrack or centroid, per --tracker-type
     with open(args.out, "w") as f:
         for t, n, frame in sample_frames(args.source, args.interval):
-            r = model.track(frame, tracker=args.tracker, conf=args.conf,
-                            imgsz=args.imgsz, persist=True, verbose=False)[0]
-            if r.boxes is None or r.boxes.id is None:
-                continue
-            ids = r.boxes.id.int().tolist()
-            xyxy = r.boxes.xyxy.tolist()
-            scores = r.boxes.conf.tolist()
-            for tid, (x1, y1, x2, y2), s in zip(ids, xyxy, scores):
+            ids, xywh, scores = track(frame)
+            for tid, (cx, cy, w, h), s in zip(ids, xywh, scores):
                 # MOT format: frame,id,x,y,w,h,conf,-1,-1,-1  (x,y = top-left)
-                f.write(f"{n},{tid},{x1:.2f},{y1:.2f},{x2 - x1:.2f},{y2 - y1:.2f},{s:.3f},-1,-1,-1\n")
+                f.write(f"{n},{tid},{cx - w / 2:.2f},{cy - h / 2:.2f},{w:.2f},{h:.2f},{s:.3f},-1,-1,-1\n")
     print("Saved", args.out)
 
 
@@ -82,6 +85,7 @@ if __name__ == "__main__":
     p.add_argument("--interval", type=float, default=2.0)
     p.add_argument("--conf", type=float, default=0.1)
     p.add_argument("--imgsz", type=int, default=640)
+    add_tracker_args(p)
     p.set_defaults(fn=predict)
 
     s = sub.add_parser("score")

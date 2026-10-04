@@ -13,6 +13,7 @@ venv/
 .venv/
 labelimg-env/
 .opencode
+tracking-env/
 
 # Model files
 dataset/dataset.yaml
