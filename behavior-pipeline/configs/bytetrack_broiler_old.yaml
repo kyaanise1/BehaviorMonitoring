@@ -1,0 +1,7 @@
+tracker_type: bytetrack
+track_high_thresh: 0.6   # high/low split (proposal: 0.6)
+track_low_thresh: 0.1    # detections below this are discarded entirely
+new_track_thresh: 0.6    # min score to start a new track
+track_buffer: 30         # sampled frames a lost track survives (30 x 2 s = 60 s)
+match_thresh: 0.5        # applied to IoU distance (1 - IoU), i.e. IoU >= 0.5
+fuse_score: True

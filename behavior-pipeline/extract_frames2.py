@@ -2,16 +2,21 @@ import cv2
 import os
 
 # Input video
-video_path = r"video/Day 1 Clip.mp4"
+video_path = r"../video/Day6_validation_5min.mp4"
 
 # Folder where extracted images will be saved
-output_folder = "tracking_frames"
+output_folder = "validation_frames"
 
 os.makedirs(output_folder, exist_ok=True)
 
 cap = cv2.VideoCapture(video_path)
 
+if not cap.isOpened():
+    print(f"Error: Cannot open video: {video_path}")
+    exit()
+
 fps = cap.get(cv2.CAP_PROP_FPS)
+
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 if fps <= 0:
@@ -29,7 +34,7 @@ print("Duration:", duration / 3600, "hours")
 interval = 2
 
 # Day number
-day_number = 1  # Change this to the appropriate day number
+day_number = 6  # Change this to the appropriate day number
 
 # Starting frame number for this day
 start_number = day_number * 1000
