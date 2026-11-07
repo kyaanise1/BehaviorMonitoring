@@ -484,6 +484,40 @@ class HuddlingModule:
         self.local_recovery = local_recovery
         self.overlap_sweep = overlap_sweep
 
+    def augment_with_untracked_yolo(self, ids, boxes, raw_boxes, raw_scores,
+                                   body_len, frame_no, min_conf=0.30,
+                                   max_duplicate_iou=0.40, max_neighbor_lengths=1.5):
+        """Optional *huddling-only* raw-YOLO proposals omitted by Hybrid V2.
+
+        The same detector already runs for RecoveryHybrid; this is NOT another
+        inference pass. Accept a sufficiently confident raw detection only when
+        it is not already represented by a tracked box and lies near tracked
+        chickens. Each accepted detection gets a negative, frame-local ID.
+        It MUST NOT enter the inactivity history or be treated as a persistent ID.
+        All actual huddling clusters still pass the original centroid-pair rule.
+        """
+        result_ids, result_boxes = list(ids), list(boxes)
+        raw_added = {}
+        if not body_len or not boxes:
+            return result_ids, result_boxes, raw_added
+        tracked_boxes = list(boxes)
+        for k, (raw_box, score) in enumerate(zip(raw_boxes, raw_scores)):
+            if score < min_conf:
+                continue
+            candidate = tuple(float(v) for v in raw_box)
+            rect = cluster_rectangle([0], [candidate])
+            # Both tracked and previously accepted raw boxes prevent duplicates.
+            if any(rectangle_iou(rect, cluster_rectangle([0], [old])) >= max_duplicate_iou
+                   for old in result_boxes):
+                continue
+            if min(math.dist(candidate[:2], old[:2]) for old in tracked_boxes) > max_neighbor_lengths * body_len:
+                continue
+            local_id = -(int(frame_no) * 1000 + k + 1)
+            result_ids.append(local_id)
+            result_boxes.append(candidate)
+            raw_added[local_id] = float(score)
+        return result_ids, result_boxes, raw_added
+
     def analyze(self, ids, boxes, body_len, frame_size):
         centroids = [(box[0], box[1]) for box in boxes]
         # Count birds in the original configured zones for diagnostic purposes.

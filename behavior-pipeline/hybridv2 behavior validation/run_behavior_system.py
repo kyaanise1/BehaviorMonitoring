@@ -1,7 +1,7 @@
 """One shared Hybrid V2 behavior controller, WITHOUT gap-aware processing.
 
 The inactivity rule is from the uploaded run_pipeline_hybrid_v2(3).py; the
-feeder-aware huddling module is unchanged. Both use the SAME tracked birds.
+feeder-aware huddling module is unchanged. Inactivity uses tracked birds only; optional raw-YOLO proposals can be used for huddling only.
 
 This runner deliberately does not detect frozen frames / corrupted samples,
 reset tracker histories, or mark missing footage. Use only on verified
@@ -45,6 +45,8 @@ def main():
     ap.add_argument('--zones', default='configs/feeding_zones.json')
     ap.add_argument('--huddle-method', choices=['connected', 'complete', 'average', 'contact'], default='complete')
     ap.add_argument('--feeder-margin-px', type=float, default=15.0, help='Margin used when checking full-cluster overlap with feeder zones (reference pixels)')
+    ap.add_argument('--huddle-raw-recovery', action='store_true',
+                    help='Include nearby untracked raw-YOLO detections in huddling ONLY (no extra model pass)')
     ap.add_argument('--hard-feeder-exclusion', action='store_true', help='Legacy mode: exclude every bird whose centroid is inside an expanded feeder zone')
     ap.add_argument('--cluster-zone-overlap', type=float, default=0.15)
     ap.add_argument('--overlap-sweep', default='', help='Comma-separated zone-overlap limits, e.g. 0.15,0.30')
@@ -141,7 +143,7 @@ def main():
     log_fields = [
         't_s', 'n_birds', 'n_huddles', 'n_inactive', 'body_len_px',
         'recovered', 'inactive_ids', 'huddle_ids', 'n_feeding',
-        'tracked_histories', 'frame_no',
+        'tracked_histories', 'frame_no', 'n_huddle_raw',
     ]
     cluster_fields = [
         't_s', 'frame_no', 'cluster_no', 'track_ids',
@@ -232,7 +234,7 @@ def main():
             t, number = record['t'], record['frame_no']
             huddles = [group for group, _origin in clusters]
             log_writer.writerow(dict(
-                t_s=f'{t:.3f}', n_birds=len(ids), n_huddles=len(huddles),
+                t_s=f'{t:.3f}', n_birds=record['n_tracked'], n_huddles=len(huddles),
                 n_inactive=len(record['inactive']),
                 body_len_px=f"{record['body_len']:.2f}" if record['body_len'] else '',
                 recovered=record['recovered'],
@@ -240,7 +242,7 @@ def main():
                 huddle_ids=';'.join('|'.join(map(str, sorted(ids[j] for j in group)))
                                     for group in huddles),
                 n_feeding=record['n_feeding'], tracked_histories=record['tracked_histories'],
-                frame_no=number,
+                frame_no=number, n_huddle_raw=len(record['raw_huddle_added']),
             ))
             if cluster_writers and (selected_times is None or round(t, 3) in selected_times):
                 if args.temporal_recovery:
@@ -265,8 +267,12 @@ def main():
                         (int(j in record['feeding_indices']) if j is not None else ''),
                     ])
                 for j, (tid, box) in enumerate(zip(ids, boxes)):
-                    write_det('hybrid', tid, record['scores'][j] if j < len(record['scores']) else None,
-                              box, int(j in excluded), membership.get(j, ''))
+                    added = record['raw_huddle_added']
+                    is_raw = tid in added
+                    score = added.get(tid) if is_raw else (
+                        record['scores'][j] if j < len(record['scores']) else None)
+                    write_det('huddle_raw' if is_raw else 'hybrid', tid, score,
+                              box, int(j in excluded), membership.get(j, ''), j)
                 for tid, box, score in zip(record['byte_ids'], record['byte_boxes'], record['byte_scores']):
                     write_det('bytetrack', tid, score, box)
                 for box, score in zip(record['raw_boxes'], record['raw_scores']):
@@ -301,13 +307,21 @@ def main():
                 for row in activity.audit_rows:
                     inactivity_writer.writerow([f'{t:.3f}', 0, *row])
             body_len = activity.body_len
+            # Inactivity has already received ONLY the tracked Hybrid V2 stream.
+            # Never let frame-local raw-YOLO IDs enter the 30-minute history.
+            huddle_ids, huddle_boxes, raw_huddle_added = list(ids), list(boxes), {}
+            if args.huddle_raw_recovery:
+                huddle_ids, huddle_boxes, raw_huddle_added = (
+                    huddling_module.augment_with_untracked_yolo(
+                        ids, boxes, raw_boxes, raw_scores, body_len, n))
             spatial = huddling_module.analyze(
-                ids, boxes, body_len, (frame.shape[1], frame.shape[0]))
+                huddle_ids, huddle_boxes, body_len, (frame.shape[1], frame.shape[0]))
             seq += 1
             record = {
                 'seq': seq, 't': t, 'frame_no': n, 'session': 0,
                 'tracked_histories': activity.tracked_histories,
-                'ids': list(ids), 'boxes': list(boxes), 'body_len': body_len,
+                'ids': huddle_ids, 'boxes': huddle_boxes, 'body_len': body_len,
+                'n_tracked': len(ids), 'raw_huddle_added': raw_huddle_added,
                 'keep_indices': spatial['keep_indices'],
                 'feeding_indices': spatial['feeding_indices'],
                 'huddles': spatial['huddles'], 'inactive': activity.inactive,
@@ -341,6 +355,8 @@ def main():
     print(f'Recovered detections: {recovered_total}; temporal huddling additions: {temporal_added}')
     print('Inactivity is centroid immobility, NOT a health diagnosis; confirm against time-based annotations.')
     print('No gap checks: missing/frozen footage is not automatically excluded and histories are not reset.')
+    if args.huddle_raw_recovery:
+        print('Huddling-only raw recovery enabled; negative IDs are frame-local, not persistent tracks.')
 
 
 if __name__ == '__main__':
