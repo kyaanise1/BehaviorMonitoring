@@ -6,8 +6,14 @@ It is NOT a production/hardware-optimized implementation.
 """
 import argparse
 import csv
+import json
 from collections import defaultdict, deque
 from pathlib import Path
+import sys
+
+PIPELINE_ROOT = Path(__file__).resolve().parent.parent
+if str(PIPELINE_ROOT) not in sys.path:
+    sys.path.insert(0, str(PIPELINE_ROOT))
 
 from ultralytics import YOLO
 
@@ -28,6 +34,8 @@ def main():
     ap.add_argument("--move-frac", type=float, default=0.5)
     ap.add_argument("--min-fill", type=float, default=0.5)
     ap.add_argument("--min-huddle", type=int, default=3)
+    ap.add_argument("--clusters-csv", default="", help="Export per-cluster bounding boxes to CSV")
+    ap.add_argument("--timestamps-csv", default="", help="Annotation CSV with t_s column; export only these timestamps")
     ap.add_argument("--log-csv", default="behavior_v2_log.csv")
     args = ap.parse_args()
 
@@ -39,6 +47,24 @@ def main():
         ap.error("--min-huddle must be >= 2")
     if not Path(args.source).exists():
         ap.error(f"Source path not found: {args.source}")
+
+    selected_times = None
+    if args.timestamps_csv:
+        with open(args.timestamps_csv, newline="", encoding="utf-8-sig") as tf:
+            selected_times = [float(row["t_s"]) for row in csv.DictReader(tf)]
+        if not selected_times:
+            ap.error("No timestamps found in --timestamps-csv")
+    if args.timestamps_csv and not args.clusters_csv:
+        ap.error("--timestamps-csv requires --clusters-csv")
+
+    cluster_file = None
+    cluster_writer = None
+    if args.clusters_csv:
+        cluster_file = open(args.clusters_csv, "w", newline="", encoding="utf-8")
+        cluster_writer = csv.writer(cluster_file)
+        cluster_writer.writerow(["t_s", "frame_no", "cluster_no", "track_ids",
+                                 "member_boxes_xywh_json", "cluster_center_x",
+                                 "cluster_center_y", "n_members", "n_clusters_in_frame"])
 
     # Two separate models preserve YOLO.track() predictor state, matching the
     # evaluation implementation. Do not replace these with one shared model.
@@ -99,11 +125,36 @@ def main():
             writer.writerow([f"{t:.3f}", len(ids), len(huddles), len(inactive),
                              f"{body_len:.2f}" if body_len else "", recovered,
                              "|".join(map(str, sorted(inactive))), ";".join(huddle_ids)])
+            if cluster_writer is not None and (
+                selected_times is None or any(abs(t - target) < 0.01 for target in selected_times)
+            ):
+                if not huddles:
+                    cluster_writer.writerow([f"{t:.3f}", n, "", "", "[]", "", "", 0, 0])
+                for cluster_no, cluster in enumerate(huddles, start=1):
+                    members = [
+                        {"track_id": int(ids[k]),
+                         "cx": round(float(boxes[k][0]), 2),
+                         "cy": round(float(boxes[k][1]), 2),
+                         "w": round(float(boxes[k][2]), 2),
+                         "h": round(float(boxes[k][3]), 2)}
+                        for k in cluster
+                    ]
+                    cluster_writer.writerow([
+                        f"{t:.3f}", n, cluster_no,
+                        "|".join(str(m["track_id"]) for m in members),
+                        json.dumps(members, separators=(",", ":")),
+                        round(sum(m["cx"] for m in members) / len(members), 2),
+                        round(sum(m["cy"] for m in members) / len(members), 2),
+                        len(members), len(huddles)
+                    ])
             count += 1
             if n % 30 == 0 or inactive:
                 print(f"[{t:8.1f}s] frame={n}, birds={len(ids)}, "
                       f"huddles={len(huddles)}, inactive={len(inactive)}, "
                       f"recovered={recovered}")
+    if cluster_file is not None:
+        cluster_file.close()
+        print(f"Saved cluster details to {args.clusters_csv}")
     print(f"Saved {args.log_csv} ({count} frames, {hybrid.recovered_total} recovered detections)")
     print("NOTE: 'inactive' means centroid immobility under the rule, NOT a health diagnosis.")
     print("Validate each reported episode against independently annotated footage.")
