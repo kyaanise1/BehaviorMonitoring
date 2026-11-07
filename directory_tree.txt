@@ -1,0 +1,93 @@
+﻿BehaviorMonitoring/
++-- annotation
+|   \-- extract_frames.py
++-- behavior-pipeline
+|   +-- __pycache__
+|   |   +-- behavior.cpython-313.pyc
+|   |   +-- common.cpython-313.pyc
+|   |   +-- tracker.cpython-310.pyc
+|   |   \-- tracker.cpython-313.pyc
+|   +-- annotated_tracking_frames
+|   |   \-- gt
+|   |       +-- gt.txt
+|   |       \-- labels.txt
+|   +-- configs
+|   |   \-- bytetrack_broiler.yaml
+|   +-- behavior.py
+|   +-- benchmark_pi.py
+|   +-- cloud.py
+|   +-- common.py
+|   +-- eval_behavior.py
+|   +-- eval_tracking.py
+|   +-- extract_frames2.py
+|   +-- pred.txt
+|   +-- pred_centroid.txt
+|   +-- run_pipeline.py
+|   +-- state_log.csv
+|   +-- sweep_centroid.py
+|   \-- tracker.py
++-- dataset
+|   \-- dataset.yaml
++-- detection
+|   +-- prepare_dataset.py
+|   +-- train.py
+|   \-- yolo11n.pt
++-- runs
+|   +-- broiler_yolo11n
+|   |   +-- weights
+|   |   |   +-- best_ncnn_model
+|   |   |   |   +-- __pycache__
+|   |   |   |   |   \-- model_pnnx.cpython-313.pyc
+|   |   |   |   +-- metadata.yaml
+|   |   |   |   +-- model.ncnn.bin
+|   |   |   |   +-- model.ncnn.param
+|   |   |   |   \-- model_ncnn.py
+|   |   |   +-- best.onnx
+|   |   |   +-- best.pt
+|   |   |   \-- last.pt
+|   |   +-- args.yaml
+|   |   +-- BoxF1_curve.png
+|   |   +-- BoxP_curve.png
+|   |   +-- BoxPR_curve.png
+|   |   +-- BoxR_curve.png
+|   |   +-- confusion_matrix.png
+|   |   +-- confusion_matrix_normalized.png
+|   |   +-- labels.jpg
+|   |   +-- results.csv
+|   |   +-- results.png
+|   |   +-- train_batch0.jpg
+|   |   +-- train_batch1.jpg
+|   |   +-- train_batch2.jpg
+|   |   +-- val_batch0_labels.jpg
+|   |   +-- val_batch0_pred.jpg
+|   |   +-- val_batch1_labels.jpg
+|   |   +-- val_batch1_pred.jpg
+|   |   +-- val_batch2_labels.jpg
+|   |   \-- val_batch2_pred.jpg
+|   \-- broiler_yolo11n-2
+|       +-- weights
+|       |   +-- best.pt
+|       |   \-- last.pt
+|       +-- args.yaml
+|       +-- BoxF1_curve.png
+|       +-- BoxP_curve.png
+|       +-- BoxPR_curve.png
+|       +-- BoxR_curve.png
+|       +-- confusion_matrix.png
+|       +-- confusion_matrix_normalized.png
+|       +-- labels.jpg
+|       +-- results.csv
+|       +-- results.png
+|       +-- train_batch0.jpg
+|       +-- train_batch1.jpg
+|       +-- train_batch2.jpg
+|       +-- val_batch0_labels.jpg
+|       +-- val_batch0_pred.jpg
+|       +-- val_batch1_labels.jpg
+|       +-- val_batch1_pred.jpg
+|       +-- val_batch2_labels.jpg
+|       \-- val_batch2_pred.jpg
++-- .gitignore
++-- dataset.yaml
++-- directory_tree.txt
+\-- train.py
