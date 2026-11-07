@@ -1,3 +1,5 @@
+# ARCHIVE THIS!
+
 """V2 tracking -> rule-based inactivity/huddling -> CSV for manual validation.
 
 This is a separate validation runner. It does not change run_pipeline.py.
