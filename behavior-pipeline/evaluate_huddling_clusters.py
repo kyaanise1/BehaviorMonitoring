@@ -1,5 +1,7 @@
 """Compare manually annotated YOLO huddle boxes with cluster-export CSVs.
 
+Use --timestamps-csv to evaluate ALL sampled frames. A sampled frame without
+a corresponding YOLO TXT file is treated as having zero ground-truth huddles.
 No video inference required. Python standard library only.
 """
 import argparse
@@ -18,7 +20,7 @@ def timestamp_from_name(name):
     return round(float(match.group(1)), 3) if match else None
 
 
-def load_annotations(path, width, height, class_id):
+def load_annotations(path, width, height, class_id, allow_empty=False):
     source = Path(path)
     if source.is_file() and source.suffix.lower() == '.zip':
         with zipfile.ZipFile(source) as z:
@@ -51,9 +53,33 @@ def load_annotations(path, width, height, class_id):
             boxes.append(((cx-w/2)*width, (cy-h/2)*height,
                           (cx+w/2)*width, (cy+h/2)*height))
         labels[t] = boxes
-    if not labels:
+    if not labels and not allow_empty:
         raise ValueError('No timestamped annotation TXT files found')
     return labels
+
+
+def load_validation_timestamps(path):
+    """Return the complete preselected validation frame set from extractor CSV."""
+    with open(path, newline='', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        if 't_s' not in (reader.fieldnames or []):
+            raise ValueError(f'{path}: validation timestamp CSV needs a t_s column')
+        timestamps = []
+        for row_no, row in enumerate(reader, 2):
+            try:
+                t = round(float(row['t_s']), 3)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f'{path}:{row_no}: invalid t_s value') from exc
+            if 'image_filename' in row and row['image_filename']:
+                from_filename = timestamp_from_name(Path(row['image_filename']).with_suffix('.txt').name)
+                if from_filename is not None and from_filename != t:
+                    raise ValueError(f'{path}:{row_no}: image filename timestamp differs from t_s')
+            timestamps.append(t)
+    if not timestamps:
+        raise ValueError(f'{path}: no validation timestamps')
+    if len(set(timestamps)) != len(timestamps):
+        raise ValueError(f'{path}: duplicated t_s values (rounded to milliseconds)')
+    return timestamps
 
 
 def load_predictions(path):
@@ -108,6 +134,7 @@ def match_count(truth, predicted, threshold):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--annotations', required=True, help='ZIP or folder with YOLO TXT labels')
+    ap.add_argument('--timestamps-csv', help='Complete selected-frame CSV (t_s). Missing TXT means no huddles for that frame')
     ap.add_argument('--baseline', default='baseline_clusters.csv')
     ap.add_argument('--feeder-aware', default='feeder_aware_clusters.csv')
     ap.add_argument('--strict', default='strict_huddling_clusters.csv')
@@ -117,14 +144,32 @@ def main():
     ap.add_argument('--output', default='huddling_evaluation.csv')
     ap.add_argument('--per-frame', default='huddling_evaluation_per_frame.csv')
     args = ap.parse_args()
-    gt = load_annotations(args.annotations, args.width, args.height, args.class_id)
+    gt = load_annotations(args.annotations, args.width, args.height, args.class_id,
+                          allow_empty=bool(args.timestamps_csv))
+    if args.timestamps_csv:
+        timestamps = load_validation_timestamps(args.timestamps_csv)
+        unexpected = sorted(set(gt) - set(timestamps))
+        if unexpected:
+            raise ValueError(
+                f'Annotation timestamps absent from {args.timestamps_csv}: {unexpected}. '
+                'Check you selected the correct validation timestamp CSV.'
+            )
+        unlabeled = sorted(set(timestamps) - set(gt))
+        for t in unlabeled:
+            gt[t] = []  # Explicit convention: no TXT = zero ground-truth huddles.
+        print(f'Validation timestamps: {len(timestamps)} frames; '
+              f'{len(unlabeled)} missing annotation TXT files treated as no huddles.')
     methods = [('Baseline', args.baseline), ('Feeder-aware', args.feeder_aware), ('Strict', args.strict)]
     summary, details = [], []
     for method, path in methods:
         predictions, seen = load_predictions(path)
-        missing = sorted(set(gt)-seen)
-        if missing:
-            raise ValueError(f'{method}: missing predictions for {len(missing)} annotated timestamps: {missing}')
+        if not args.timestamps_csv:
+            # Legacy mode: each annotated timestamp must appear in the prediction CSV.
+            missing = sorted(set(gt) - seen)
+            if missing:
+                raise ValueError(f'{method}: missing predictions for {len(missing)} annotated timestamps: {missing}')
+        # With a full validation manifest, no prediction row means zero predicted
+        # clusters, which is normal for cluster-only CSV output.
         for threshold in (0.50, 0.30):
             tp = fp = fn = 0
             for t in sorted(gt):

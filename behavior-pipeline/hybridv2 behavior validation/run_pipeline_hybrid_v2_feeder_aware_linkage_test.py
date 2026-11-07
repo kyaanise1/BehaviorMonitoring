@@ -148,6 +148,44 @@ def rectangle_iou(a, b):
     return inter / union if union > 0 else 0.0
 
 
+def detect_huddles_average_no_chaining(centroids, body_len_px, min_birds=3):
+    """Average-linkage ranking with a HARD all-pairs body-length limit.
+
+    Every final cluster has maximum centroid-to-centroid member distance strictly
+    below one estimated body length. A-B and B-C closeness can never make A-C
+    join if A-C violates the limit. One bird belongs to at most one group.
+    """
+    if not body_len_px or body_len_px <= 0:
+        return []
+    groups = [[i] for i in range(len(centroids))]
+    while True:
+        best = None
+        for a in range(len(groups)):
+            for b in range(a + 1, len(groups)):
+                distances = [math.dist(centroids[i], centroids[j])
+                             for i in groups[a] for j in groups[b]]
+                # A hard maximum rule, not a mean/connected-path proximity rule.
+                if max(distances) >= body_len_px:
+                    continue
+                mean_distance = sum(distances) / len(distances)
+                candidate = (mean_distance, a, b)
+                if best is None or candidate < best:
+                    best = candidate
+        if best is None:
+            break
+        _, a, b = best
+        groups[a].extend(groups[b])
+        del groups[b]
+    return [sorted(g) for g in groups if len(g) >= min_birds]
+
+
+def all_pairs_within_body_length(cluster, boxes, body_len_px):
+    """Validate EVERY pair of member centroids, not merely neighbors/averages."""
+    return bool(body_len_px and body_len_px > 0 and
+                all(math.dist(boxes[i][:2], boxes[j][:2]) < body_len_px
+                    for i, j in combinations(cluster, 2)))
+
+
 def recover_compact_triplets(primary, keep_indices, boxes, body_len_px,
                              zones, ref_size, frame_size, overlap_limit):
     """Conservative second pass on *unassigned* eligible chickens.
@@ -239,7 +277,8 @@ def temporal_recover_huddles(target, window, zones, ref_size):
     IMPORTANT: The thresholds are development-set choices, not independently
     verified operating thresholds. Do not treat Day 6 F1 as a holdout result.
     """
-    primary = [(list(cluster), 'primary') for cluster in target['huddles']]
+    primary = [(list(cluster), 'primary') for cluster in target['huddles']
+               if all_pairs_within_body_length(cluster, target['boxes'], target['body_len'])]
     audit = []
     if len(window) < 5 or not target['body_len'] or not zones:
         return primary, audit
@@ -257,7 +296,7 @@ def temporal_recover_huddles(target, window, zones, ref_size):
         return primary, audit
     eligible = sorted(target['ids'][i] for i in target['keep_indices'])
     index_of = {tid: i for i, tid in enumerate(target['ids'])}
-    primary_rects = [cluster_rectangle(ids, all_boxes) for ids in target['huddles']]
+    primary_rects = [cluster_rectangle(cluster, all_boxes) for cluster, _ in primary]
     next_frames = []
     for other in window:
         delta = other['seq'] - target['seq']
@@ -273,7 +312,8 @@ def temporal_recover_huddles(target, window, zones, ref_size):
     candidates = []
     for track_ids in combinations(eligible, 3):
         mg, ag, mc, ac = temporal_triplet_geometry(track_ids, mapping, length)
-        if mg > .75 or ag > .40 or mc > 2.1 or ac > 1.5:
+        # No chaining: A-C cannot exceed one body length even if A-B/B-C pass.
+        if mg > .75 or ag > .40 or mc >= 1.0 or ac > 1.5:
             continue
         indices = [index_of[tid] for tid in track_ids]
         rect = cluster_rectangle(indices, all_boxes)
@@ -621,7 +661,9 @@ def main():
                 filtered_centroids = [centroids[i] for i in keep_indices]
                 huddle_fn = {"connected": detect_huddles,
                              "complete": detect_huddles_complete_linkage,
-                             "average": detect_huddles_average_linkage}[args.huddle_method]
+                             # Keep average-distance ranking, but require ALL
+                             # pairs to be within a single body length.
+                             "average": detect_huddles_average_no_chaining}[args.huddle_method]
                 filtered_huddles = huddle_fn(
                     filtered_centroids, body_len, args.min_huddle
                 )
@@ -652,6 +694,10 @@ def main():
                     candidate_huddles, overlap_by_cluster, args.cluster_zone_overlap,
                     args.local_recovery, keep_indices, boxes, body_len,
                     feeding_zones, ref_size, (frame.shape[1], frame.shape[0]))
+                # Final hard invariant for primary AND local-recovery clusters.
+                # Connected groups violating it are rejected, never exported.
+                huddles = [cluster for cluster in huddles
+                           if all_pairs_within_body_length(cluster, boxes, body_len)]
 
                 # Inactivity continues to use the complete, unfiltered history.
                 inactive = update_inactivity(
