@@ -1,0 +1,13 @@
+﻿case_id,session,anchor_track_id,start_s,end_s,anchor_x,anchor_y,movement_limit_px,pred_inactive,pred_basis,tracked_at_endpoint,source_video,anchor_image
+D6-001,0,21,0.000,1801.886,219.00,57.43,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-001_anchor.jpg
+D6-002,0,14,0.000,1801.886,1084.67,571.54,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-002_anchor.jpg
+D6-003,0,10,0.000,1801.886,407.95,624.21,44.51,0,zero_flock_alerts,1,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-003_anchor.jpg
+D6-004,0,5,0.000,1801.886,865.67,42.03,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-004_anchor.jpg
+D6-005,0,6,0.000,1801.886,540.82,154.06,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-005_anchor.jpg
+D6-006,0,19,0.000,1801.886,793.02,499.70,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-006_anchor.jpg
+D6-007,0,8,0.000,1801.886,321.85,344.36,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-007_anchor.jpg
+D6-008,0,2,0.000,1801.886,999.96,307.75,44.51,0,zero_flock_alerts,1,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-008_anchor.jpg
+D6-009,0,11,0.000,1801.886,573.91,397.62,44.51,0,zero_flock_alerts,1,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-009_anchor.jpg
+D6-010,0,3,0.000,1801.886,740.43,169.82,44.51,0,zero_flock_alerts,1,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-010_anchor.jpg
+D6-011,0,1,0.000,1801.886,402.54,44.64,44.51,0,zero_flock_alerts,0,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-011_anchor.jpg
+D6-012,0,7,0.000,1801.886,833.91,339.29,44.51,0,zero_flock_alerts,1,C:\Acads\4th Year\1st Semester\Thesis\Behavior Monitoring\video\Day6_repaired.mp4,images/D6-012_anchor.jpg

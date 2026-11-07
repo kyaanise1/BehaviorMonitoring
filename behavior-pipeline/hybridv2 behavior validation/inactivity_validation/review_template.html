@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 6 · 30-minute inactivity review</title>
+<style>
+:root{color-scheme:light;--ink:#202d3b;--muted:#586776;--bg:#f5f7fa;--paper:#fff;--blue:#1967b5;--line:#dae1e8;--green:#137b50}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.48 system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--ink)}
+header{background:#15273b;color:white;padding:24px max(18px,calc((100vw - 1160px)/2));}header h1{font-size:25px;margin:0 0 5px}header p{margin:0;color:#ccdae8}
+main{max-width:1160px;margin:20px auto;padding:0 16px 48px}.banner{border:1px solid #d6e3eb;border-left:4px solid var(--blue);background:#eff6fb;padding:13px 16px;border-radius:8px;margin-bottom:17px}
+.panel{background:white;border:1px solid var(--line);border-radius:11px;padding:18px;margin-bottom:17px;box-shadow:0 2px 9px rgba(25,40,64,.035)}
+.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.toolbar .counter{font-weight:700;margin-right:auto}
+button,.buttonlike{background:white;border:1px solid #b9c5d0;border-radius:7px;color:var(--ink);padding:9px 12px;cursor:pointer;font:inherit}button:hover,.buttonlike:hover{background:#edf4fa}button.primary{background:var(--blue);border-color:var(--blue);color:white}button.primary:hover{background:#12538e}button:disabled{opacity:.5;cursor:default}
+.layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,1fr);gap:17px}@media(max-width:920px){.layout{grid-template-columns:1fr}}
+h2{font-size:19px;margin:0 0 9px}h3{font-size:16px;margin:8px 0}.small{font-size:13px;color:var(--muted)}.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.image{width:100%;height:auto;display:block;border-radius:7px;border:1px solid var(--line)}video{width:100%;max-height:480px;display:block;background:#101923;border-radius:7px}.video-wrap{position:relative}.track-overlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none} .muted{color:var(--muted)}
+.info-line{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}.info-line span{background:#f1f5f9;border-radius:6px;padding:4px 8px;font-size:13px}
+fieldset{border:0;border-top:1px solid var(--line);padding:14px 0;margin:0}legend{font-weight:700;padding:0 6px 0 0}.choices{display:flex;flex-wrap:wrap;gap:6px}.choices label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:7px;padding:7px 9px;cursor:pointer;font-size:14px}.choices label:has(input:checked){background:#eaf5ff;border-color:#4991cd}input[type=radio]{accent-color:var(--blue)}textarea{width:100%;border:1px solid #becbd7;border-radius:7px;font:inherit;padding:9px;min-height:75px;resize:vertical}
+.progress{height:9px;background:#e5edf4;border-radius:20px;overflow:hidden;margin:12px 0}.progress>div{height:100%;width:0;background:var(--green);transition:width .2s}.thumb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-top:12px}.thumb img{width:100%;border-radius:5px;border:1px solid var(--line)}.thumb strong{font-size:13px}.thumb button{padding:4px 7px;font-size:12px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row.space{justify-content:space-between}details summary{font-weight:650;cursor:pointer}.footer{font-size:13px;color:var(--muted);margin-top:15px}
+.tag{font-weight:700;color:#1b704e}.hidden{display:none!important}input[type=file]{max-width:260px}
+</style>
+</head>
+<body>
+<header><h1>Day 6 · Inactivity ground-truth review</h1>
+<p>30-minute physical-chicken cases · independent human labels · no model predictions shown during review</p></header>
+<main>
+<div class="banner"><strong>How to label:</strong> Identify the chicken highlighted <em>only at the beginning</em>. Follow that physical chicken in the <strong>original continuous footage</strong> from <span id="globalTimes"></span>, not just the snapshots. Check whether its centroid stayed within the approximately half-body-length range <em>for the full 30 minutes</em>. A glitch, identity ambiguity, or missing footage is <strong>Uncertain</strong>, never an assumed inactive event. The review images are navigation aids—not proof of inactivity.</div>
+<section class="panel">
+  <div class="toolbar"><div class="counter" id="counter"></div><button id="prev" type="button">← Previous</button><button id="next" type="button">Next →</button><button id="export" class="primary" type="button">Export annotations.csv</button></div>
+  <div class="progress"><div id="progressBar"></div></div>
+  <div class="row space"><span class="small" id="progressText"></span><span class="small" id="savedText">Labels stay on this computer until exported.</span></div>
+</section>
+<div class="layout">
+  <section class="panel">
+    <h2>Original video and target</h2>
+    <p class="small">The magenta circle indicates the starting chicken only. The video itself is deliberately unannotated to avoid using model tracking as ground truth.</p>
+    <img class="image" id="anchorImage" alt="Original frame with starting chicken indicated by magenta circle">
+    <div class="info-line"><span id="times"></span><span id="limit"></span></div>
+    <div class="video-wrap"><video id="video" controls preload="metadata"></video><canvas id="trackOverlay" class="track-overlay"></canvas></div>
+    <div class="row" style="margin-top:9px">
+      <button id="seekStart" type="button">Jump to start</button>
+      <button id="seekMid" type="button">Jump to midpoint</button>
+      <button id="seekEnd" type="button">Jump to end</button>
+      <span class="small">Playback:</span><button class="speed" data-rate="1" type="button">1×</button><button class="speed" data-rate="4" type="button">4×</button><button class="speed" data-rate="8" type="button">8×</button>
+    </div>
+    <div class="row" style="margin-top:9px"><label class="small"><input id="toggleOverlay" type="checkbox" disabled> After completing manual labels: show model track position for diagnosis</label></div>
+    <p class="small" id="videoHelp">If the player doesn't load, open the original Day6_repaired.mp4 separately, seek to the listed times, and use this page to record labels.</p>
+    <details><summary>View seven original-frame checkpoints (navigation only)</summary><div class="thumb-grid" id="checkpoints"></div></details>
+  </section>
+  <section class="panel">
+    <h2 id="caseName">Case</h2>
+    <p class="small">Ground truth first. If you can't reliably follow this physical chicken across the window, choose No or Uncertain instead of guessing.</p>
+    <fieldset><legend>1. Can you reliably identify the SAME physical chicken through the review window?</legend>
+      <div class="choices" data-group="identity_visible">
+        <label><input type="radio" name="identity_visible" value="yes">Yes</label>
+        <label><input type="radio" name="identity_visible" value="no">No</label>
+        <label><input type="radio" name="identity_visible" value="uncertain">Uncertain</label>
+      </div>
+    </fieldset>
+    <fieldset><legend>2. Was the entire observation window recorded continuously and visibly?</legend>
+      <div class="choices" data-group="recording_continuous">
+        <label><input type="radio" name="recording_continuous" value="yes">Yes</label>
+        <label><input type="radio" name="recording_continuous" value="no">No: glitch or missing footage</label>
+        <label><input type="radio" name="recording_continuous" value="uncertain">Uncertain</label>
+      </div>
+    </fieldset>
+    <fieldset><legend>3. Did its body-center position stay within the allowed range for the whole 30 minutes?</legend>
+      <div class="choices" data-group="movement">
+        <label><input type="radio" name="movement" value="stayed_within">Yes → Inactive</label>
+        <label><input type="radio" name="movement" value="exceeded">No → Not inactive</label>
+        <label><input type="radio" name="movement" value="uncertain">Uncertain</label>
+      </div>
+      <p class="small">Use the max–min horizontal and vertical centroid range, not head movements. A repeated frozen image is not evidence of actual inactivity.</p>
+    </fieldset>
+    <fieldset><legend>4. Optional diagnostic: Did the SYSTEM tracking ID remain on this chicken?</legend>
+      <div class="choices" data-group="tracker_stable">
+        <label><input type="radio" name="tracker_stable" value="yes">Yes</label>
+        <label><input type="radio" name="tracker_stable" value="no">No</label>
+        <label><input type="radio" name="tracker_stable" value="uncertain">Not checked</label>
+      </div>
+      <p class="small">Answer this after manual labeling, using your separate tracking overlay if needed. For zero flock alerts, a tracking switch does not automatically exclude an independently followable physical chicken.</p>
+    </fieldset>
+    <label for="notes"><strong>Notes (optional):</strong></label>
+    <textarea id="notes" placeholder="Movement time, glitch, identity switch, uncertain area…"></textarea>
+    <p class="tag" id="caseStatus"></p>
+    <div class="row"><button class="primary" id="nextBottom" type="button">Save and next →</button></div>
+  </section>
+</div>
+<section class="panel"><h2>Save and resume</h2>
+  <p>Labels are saved in this browser when supported. <strong>Export annotations.csv</strong> regularly; that's the permanent file used for scoring. You can import that CSV to resume later.</p>
+  <div class="row"><label><strong>Import earlier annotations.csv:</strong> <input type="file" id="import" accept=".csv,text/csv"></label><button type="button" id="clear">Clear this browser's labels</button></div>
+  <p class="footer">Data remains local. This page uses no server or network request. The review starts at the first sampled frame and selects birds using their initial positions. This is a targeted, sampled evaluation; it does not automatically measure whole-flock sensitivity or replace independent full-video labeling. After exporting, run the Python <code>score</code> command.</p>
+</section>
+</main>
+<script>
+'use strict';
+const DATA = __INJECT_DATA_JSON__;
+const FIELDS=['case_id','identity_visible','recording_continuous','movement','tracker_stable','notes'];
+const STORAGE_KEY='day6-inactivity-'+DATA.cases.map(x=>x.case_id).join('-')+'-'+DATA.end;
+let state={}; let index=0;
+function $(id){return document.getElementById(id)}
+function blank(){return {identity_visible:'',recording_continuous:'',movement:'',tracker_stable:'',notes:''}}
+try {const old=localStorage.getItem(STORAGE_KEY);if(old)state=JSON.parse(old)||{}} catch(e) {}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));$('savedText').textContent='Saved in browser. Export CSV for a permanent copy.'}catch(e){$('savedText').textContent='Browser storage unavailable: export CSV now.'}}
+function current(){const id=DATA.cases[index].case_id;return state[id]||blank()}
+function completed(a){return a && a.identity_visible && a.recording_continuous && a.movement}
+function updateProgress(){const count=DATA.cases.filter(c=>completed(state[c.case_id])).length;$('progressBar').style.width=(count/DATA.cases.length*100)+'%';$('progressText').textContent=count+' / '+DATA.cases.length+' with all three required answers'}
+function record(){const c=DATA.cases[index];state[c.case_id]=state[c.case_id]||blank();return state[c.case_id]}
+function render(){const c=DATA.cases[index],a=current();$('counter').textContent='Case '+(index+1)+' of '+DATA.cases.length;$('caseName').textContent=c.case_id+' · highlighted chicken';$('globalTimes').textContent=DATA.start+'–'+DATA.end;$('times').textContent=c.start+'–'+c.end;$('limit').textContent='Approximate movement limit: '+c.limit+' px';$('anchorImage').src=c.anchor;
+for(const field of FIELDS.slice(1,5)){document.querySelectorAll('input[name="'+field+'"]').forEach(input=>input.checked=(a[field]===input.value))}
+$('notes').value=a.notes||'';$('caseStatus').textContent=completed(a)?'Manual labels recorded':'Manual labels incomplete';$('toggleOverlay').disabled=!completed(a);if(!completed(a))$('toggleOverlay').checked=false;drawOverlay();$('prev').disabled=index===0;$('next').disabled=index===DATA.cases.length-1;$('nextBottom').textContent=index===DATA.cases.length-1?'Last case · export CSV':'Save and next →';updateProgress()}
+function navigate(delta){index=Math.max(0,Math.min(DATA.cases.length-1,index+delta));$('toggleOverlay').checked=false;render();}
+function seek(t){const v=$('video');if(v.readyState>0){v.currentTime=Math.max(0,t)}else{v.addEventListener('loadedmetadata',()=>{v.currentTime=Math.max(0,t)},{once:true})}}
+$('video').src=DATA.video;
+// Optional, clearly separated post-label tracker audit. The overlay cannot be
+// activated until the user has entered independent manual labels.
+function drawOverlay(){
+  const vid=$('video'),can=$('trackOverlay'),rect=vid.getBoundingClientRect();
+  const w=vid.clientWidth,h=vid.clientHeight,dpr=window.devicePixelRatio||1;
+  if(!w||!h)return;
+  if(can.width!==Math.round(w*dpr)||can.height!==Math.round(h*dpr)){can.width=Math.round(w*dpr);can.height=Math.round(h*dpr)}
+  const ctx=can.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  if(!$('toggleOverlay').checked||!completed(current())||!vid.videoWidth||!vid.videoHeight)return;
+  const points=DATA.cases[index].points||[];if(!points.length)return;
+  const t=vid.currentTime;
+  let lo=0,hi=points.length-1;
+  while(lo<hi){let mid=(lo+hi)>>1;if(points[mid][0]<t)lo=mid+1;else hi=mid}
+  const near=[points[lo],points[Math.max(0,lo-1)]].sort((a,b)=>Math.abs(a[0]-t)-Math.abs(b[0]-t))[0];
+  if(!near||Math.abs(near[0]-t)>2.5)return;
+  const scale=Math.min(w/vid.videoWidth,h/vid.videoHeight),ox=(w-vid.videoWidth*scale)/2,oy=(h-vid.videoHeight*scale)/2;
+  const x=ox+near[1]*scale,y=oy+near[2]*scale;
+  ctx.strokeStyle='#fa4ff2';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#fa4ff2';ctx.font='bold 16px system-ui';ctx.fillText('MODEL ID '+DATA.cases[index].track_id,Math.min(x+24,w-120),Math.max(y-10,18));
+}
+$('toggleOverlay').addEventListener('change',drawOverlay);
+$('video').addEventListener('timeupdate',drawOverlay);$('video').addEventListener('seeked',drawOverlay);
+$('video').addEventListener('loadedmetadata',drawOverlay);window.addEventListener('resize',drawOverlay);
+for(const btn of document.querySelectorAll('.speed')){btn.addEventListener('click',()=>{$('video').playbackRate=Number(btn.dataset.rate)})}
+
+$('video').addEventListener('error',()=>{$('videoHelp').textContent='Browser could not load local video. Open Day6_repaired.mp4 in your video player to review continuously; this page still saves labels.'});
+$('prev').onclick=()=>navigate(-1);$('next').onclick=()=>navigate(1);$('nextBottom').onclick=()=>navigate(1);
+$('seekStart').onclick=()=>seek(DATA.cases[index].start_s);$('seekMid').onclick=()=>seek((DATA.cases[index].start_s+DATA.cases[index].end_s)/2);$('seekEnd').onclick=()=>seek(DATA.cases[index].end_s);
+for(const input of document.querySelectorAll('input[type=radio]')){input.addEventListener('change',()=>{record()[input.name]=input.value;save();render()})}
+$('notes').addEventListener('input',()=>{record().notes=$('notes').value;save();updateProgress()});
+function escapeCsv(v){const str=String(v==null?'':v);return /[",\r\n]/.test(str)?'"'+str.replace(/"/g,'""')+'"':str}
+$('export').onclick=()=>{const rows=[FIELDS.join(',')];for(const c of DATA.cases){const a=state[c.case_id]||blank();rows.push([c.case_id,...FIELDS.slice(1).map(f=>a[f]||'')].map(escapeCsv).join(','))}const blob=new Blob(['\uFEFF'+rows.join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='annotations.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2500)};
+function parseCsv(text){const out=[],row=[];let field='',q=false;for(let i=0;i<text.length;i++){const ch=text[i];if(q){if(ch==='"'&&text[i+1]==='"'){field+='"';i++}else if(ch==='"')q=false;else field+=ch}else if(ch==='"')q=true;else if(ch===','){row.push(field);field=''}else if(ch==='\n'||ch==='\r'){row.push(field);field='';if(row.some(x=>x!==''))out.push(row.slice());row.length=0;if(ch==='\r'&&text[i+1]==='\n')i++}else field+=ch}if(field!==''||row.length){row.push(field);out.push(row)}return out}
+$('import').addEventListener('change',async ev=>{const file=ev.target.files[0];if(!file)return;try{const rows=parseCsv((await file.text()).replace(/^\uFEFF/,''));const headers=rows.shift();if(!headers||!FIELDS.every(x=>headers.includes(x)))throw Error('CSV columns do not match the exported annotations format');const valid=new Set(DATA.cases.map(x=>x.case_id));let n=0;for(const row of rows){const obj={};headers.forEach((h,i)=>obj[h]=row[i]||'');if(!valid.has(obj.case_id))continue;const rec=blank();for(const key of FIELDS.slice(1))rec[key]=obj[key]||'';state[obj.case_id]=rec;n++}save();render();alert('Restored '+n+' case(s).')}catch(error){alert('Could not import CSV: '+error.message)}ev.target.value=''});
+$('clear').onclick=()=>{if(confirm('Clear browser labels? Export CSV first if you need them.')){state={};save();render()}};
+$('checkpoints').innerHTML='';for(const c of DATA.checkpoints){const div=document.createElement('div');div.className='thumb';const img=document.createElement('img');img.src=c.path;img.alt='Video at '+c.time;const label=document.createElement('strong');label.textContent=c.time;const btn=document.createElement('button');btn.textContent='Jump to time';btn.onclick=()=>seek(c.time_s);div.append(img,label,document.createElement('br'),btn);$('checkpoints').append(div)}
+render();
+</script>
+</body>
+</html>
