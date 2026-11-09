@@ -1,0 +1,32 @@
+DAY 6: CVAT GROUND TRUTH vs HYBRID V2 INACTIVITY
+=======================================================
+Scope: Short-duration FLOCK-LEVEL sampled-frame comparison
+CVAT physical chicken tracks: 26
+CVAT frames: 133; matched frames: 133
+Annotated interval: 0.000 to 393.750 s (span 393.750 s)
+System rows in annotated interval: 198
+System inactivity alert rows in annotated interval: 0
+30-minute rule evaluable: NO
+
+CONFUSION MATRIX (matched CVAT frames, n=133)
+                            Predicted 1  Predicted 0
+Actual inactive (1)                 0            0
+Actual not inactive (0)             0          133
+
+METRICS (sampled-frame, flock-level):
+  accuracy             1.0000 (100.00%)
+  precision            N/A
+  recall               N/A
+  f1_score             N/A
+  specificity          1.0000 (100.00%)
+  balanced_accuracy    N/A
+
+LIMITATIONS AND WARNINGS:
+  - CVAT annotations span less than 1800 seconds: cannot validate the actual 30-minute inactivity rule.
+  - Ground truth is NEGATIVE ONLY: precision, recall and F1 cannot establish positive-class detection performance.
+  - CVAT timestamps are ESTIMATES from the original ground-truth conversion. Verify FPS and clip alignment before publication.
+  - The system log contains flock-level counts, not coordinates of predicted chicken IDs. No per-chicken ID match or individual accuracy is claimed.
+  - Repeated sampled frames are correlated; the count of TN frames is not the number of independent chickens or independent 30-minute trials.
+  - Interpolated CVAT boxes require visual review for accurate tracking/identity.
+
+These metrics are NOT a validated 30-minute inactivity detection accuracy.

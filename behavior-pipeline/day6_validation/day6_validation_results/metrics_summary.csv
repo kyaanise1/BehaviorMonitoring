@@ -1,0 +1,7 @@
+﻿metric,value,percent,interpretation
+accuracy,1.0,100.0,"Short-duration, sampled-frame flock-level agreement; NOT validated 30-minute performance."
+precision,,,N/A when system predicted no positive inactivity alerts.
+recall,,,N/A without any ground-truth inactive events.
+f1_score,,,N/A without any ground-truth inactive events.
+specificity,1.0,100.0,Based on manually labeled negative CVAT frames only.
+balanced_accuracy,,,N/A unless both ground-truth classes are present.

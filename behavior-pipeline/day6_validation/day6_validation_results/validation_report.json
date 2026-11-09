@@ -1,0 +1,45 @@
+{
+  "scope": "short-duration, flock-level, sampled-frame binary no-inactivity comparison",
+  "ground_truth_file": "day6_validation\\day6_cvat_ground_truth_boxes.csv",
+  "prediction_file": "day6_validation\\behavior_day6test2.csv",
+  "ground_truth_tracks": 26,
+  "ground_truth_labeled_inactive_tracks": 0,
+  "ground_truth_labeled_not_inactive_tracks": 26,
+  "cvat_frame_count": 133,
+  "matched_frame_count": 133,
+  "unmatched_frame_count": 0,
+  "matched_prediction_row_reuses": 0,
+  "gt_first_timestamp_s_aligned": 0.0,
+  "gt_last_timestamp_s_aligned": 393.75,
+  "gt_annotated_span_s": 393.75,
+  "time_offset_s": 0.0,
+  "max_time_difference_s": 1.5,
+  "required_inactivity_s": 1800.0,
+  "eligible_for_full_30min_rule_validation": false,
+  "system_predictions_full_file": 1804,
+  "system_predictions_in_gt_interval": 198,
+  "system_alert_rows_in_gt_interval": 0,
+  "system_alert_rows_full_file": 0,
+  "confusion_matrix": {
+    "TP": 0,
+    "FP": 0,
+    "FN": 0,
+    "TN": 133
+  },
+  "metrics": {
+    "accuracy": 1.0,
+    "precision": null,
+    "recall": null,
+    "f1_score": null,
+    "specificity": 1.0,
+    "balanced_accuracy": null
+  },
+  "warnings": [
+    "CVAT annotations span less than 1800 seconds: cannot validate the actual 30-minute inactivity rule.",
+    "Ground truth is NEGATIVE ONLY: precision, recall and F1 cannot establish positive-class detection performance.",
+    "CVAT timestamps are ESTIMATES from the original ground-truth conversion. Verify FPS and clip alignment before publication.",
+    "The system log contains flock-level counts, not coordinates of predicted chicken IDs. No per-chicken ID match or individual accuracy is claimed.",
+    "Repeated sampled frames are correlated; the count of TN frames is not the number of independent chickens or independent 30-minute trials.",
+    "Interpolated CVAT boxes require visual review for accurate tracking/identity."
+  ]
+}
