@@ -36,6 +36,9 @@ def main():
     ap.add_argument('--weights', required=True)
     ap.add_argument('--tracker', default='configs/bytetrack_broiler.yaml')
     ap.add_argument('--interval', type=float, default=2.0)
+    ap.add_argument('--refind-seconds', type=float, default=300.0,
+                    help='Hybrid refind pass: seconds a missed bird keeps its stable ID, found again only on an '
+                         'unclaimed box (hybrid_tracker.HybridIDManager). 0 = off, the earlier tracker exactly')
     ap.add_argument('--conf', type=float, default=0.1)
     ap.add_argument('--imgsz', type=int, default=640)
     ap.add_argument('--window', type=float, default=1800.0)
@@ -126,9 +129,13 @@ def main():
     # Identical settings to run_pipeline_hybrid_v2(3).py.
     tracker_model = YOLO(args.weights, task='detect')
     detector_model = YOLO(args.weights, task='detect')
+    refind_missed = int(round(args.refind_seconds / args.interval)) if args.refind_seconds > 0 else 0
+    if refind_missed <= 4:
+        refind_missed = 0
+    print(f'Stable IDs: refind pass {"off" if not refind_missed else f"on, {refind_missed} samples (~{args.refind_seconds:g} s)"}')
     hybrid = RecoveryHybrid(tight=0.5, wide=4.0, max_missed=4, wide_conf=0.3,
                             size_ratio=2.0, recovery_conf=0.7, recovery_distance=1.5,
-                            duplicate_iou=0.5)
+                            duplicate_iou=0.5, refind_missed=refind_missed)
     inactivity_module = InactivityModule(args.window, args.interval, args.move_frac, args.min_fill)
     huddling_module = HuddlingModule(feeding_zones, ref_size, args.min_huddle,
                                       args.huddle_method, args.cluster_zone_overlap,

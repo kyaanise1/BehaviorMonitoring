@@ -124,14 +124,31 @@ class HybridIDManager:
 
     Limitations: proximity does not prove identity, particularly in crowded birds;
     this cannot recover missing ByteTrack boxes or guarantee 30-min identity.
+
+    Optional pass 4, "refind" (refind_missed > 0; 0 = off, the behaviour above
+    exactly): in a closed pen a bird whose stable ID ran out after max_missed
+    frames was almost always hidden or missed by the detector, not gone, and a
+    new ID restarts its 30-minute inactivity clock (the Day 12 non-gap audit:
+    nearly every track ends never_spanned_full_30min_window). With refind on, a
+    stable ID missed for more than max_missed frames is kept up to
+    refind_missed frames, but it only competes in a LAST pass, for the boxes no
+    seen bird claimed (those that would otherwise get a brand-new ID), within
+    refind_frac body lengths (default: wide_frac). It never takes a box from a
+    bird that is being seen, and RecoveryHybrid still only revives IDs missed
+    for at most max_missed frames.
     """
 
     def __init__(self, tight_frac=0.5, wide_frac=4.0, max_missed=4,
-                 wide_conf=0.3, max_size_ratio=2.0, body_window=200):
+                 wide_conf=0.3, max_size_ratio=2.0, body_window=200,
+                 refind_missed=0, refind_frac=None):
         if not (0 < tight_frac <= wide_frac):
             raise ValueError("Require 0 < tight_frac <= wide_frac")
         if max_missed < 0:
             raise ValueError("max_missed must be non-negative")
+        if refind_missed and refind_missed <= max_missed:
+            raise ValueError("refind_missed must be 0 (off) or more than max_missed")
+        self.refind_missed = int(refind_missed)
+        self.refind_frac = float(refind_frac if refind_frac is not None else wide_frac)
         if max_size_ratio < 1:
             raise ValueError("max_size_ratio must be >= 1")
         self.tight_frac = float(tight_frac)
@@ -190,7 +207,10 @@ class HybridIDManager:
                 self._body.append(statistics.median(body_values))
         body = statistics.median(self._body) if self._body else 1.0
 
-        tids = list(self.tracks)
+        all_tids = list(self.tracks)
+        # Passes 1-3 see only IDs missed for at most max_missed frames (all IDs, when refind is off).
+        tids = [tid for tid in all_tids if self.tracks[tid].missed <= self.max_missed]
+        dormant = [tid for tid in all_tids if self.tracks[tid].missed > self.max_missed]
         dids = list(range(len(boxes)))
         matched = self._greedy(tids, dids, boxes, body, self.tight_frac)
 
@@ -219,6 +239,12 @@ class HybridIDManager:
         rem_d = [di for di in dids if di not in used_d and scores[di] >= self.wide_conf]
         matched.update(self._greedy(rem_t, rem_d, boxes, body, self.wide_frac))
 
+        # Pass 4 (refind, off unless refind_missed > 0): long-missing IDs, only on unclaimed boxes.
+        if dormant:
+            used_d = set(matched.values())
+            left = [di for di in dids if di not in used_d and scores[di] >= self.wide_conf]
+            matched.update(self._greedy(dormant, left, boxes, body, self.refind_frac))
+
         stable = [None] * len(boxes)
         for tid, di in matched.items():
             tr = self.tracks[tid]
@@ -230,10 +256,11 @@ class HybridIDManager:
             stable[di] = tid
 
         # Count missing processed frames only, not elapsed wall-clock seconds.
-        for tid in tids:
+        limit = self.refind_missed or self.max_missed
+        for tid in all_tids:
             if tid not in matched:
                 self.tracks[tid].missed += 1
-                if self.tracks[tid].missed > self.max_missed:
+                if self.tracks[tid].missed > limit:
                     del self.tracks[tid]
 
         # Keep all ByteTrack boxes, rather than hiding unmatched predictions.
@@ -266,6 +293,10 @@ def add_tracker_args(ap):
                     help="centroid/hybrid: min confidence for wide recovery")
     ap.add_argument("--hybrid-size-ratio", type=float, default=2.0,
                     help="hybrid: maximum width/height ratio change during association")
+    ap.add_argument("--refind-missed", type=int, default=0,
+                    help="hybrid: frames a long-missing ID may still be found again on an unclaimed box (0 = off)")
+    ap.add_argument("--refind-frac", type=float, default=None,
+                    help="hybrid: refind distance in body lengths (default: --wide)")
 
 
 def make_runner(args, model):
@@ -282,6 +313,8 @@ def make_runner(args, model):
                 max_missed=getattr(args, "max_missed", 4),
                 wide_conf=getattr(args, "wide_conf", 0.3),
                 max_size_ratio=getattr(args, "hybrid_size_ratio", 2.0),
+                refind_missed=getattr(args, "refind_missed", 0),
+                refind_frac=getattr(args, "refind_frac", None),
             )
 
         def run(frame):

@@ -43,7 +43,8 @@ class RecoveryHybrid:
     def __init__(self, tight=0.5, wide=4.0, max_missed=4,
                  wide_conf=0.3, size_ratio=2.0,
                  recovery_conf=0.7, recovery_distance=1.5,
-                 duplicate_iou=0.5, duplicate_center=0.25):
+                 duplicate_iou=0.5, duplicate_center=0.25,
+                 refind_missed=0, refind_frac=None):
         if not 0 <= recovery_conf <= 1:
             raise ValueError("recovery_conf must be between 0 and 1")
         if not 0 < recovery_distance:
@@ -52,7 +53,8 @@ class RecoveryHybrid:
             raise ValueError("duplicate_iou must be in (0,1]")
         self.manager = HybridIDManager(tight_frac=tight, wide_frac=wide,
                                        max_missed=max_missed, wide_conf=wide_conf,
-                                       max_size_ratio=size_ratio)
+                                       max_size_ratio=size_ratio,
+                                       refind_missed=refind_missed, refind_frac=refind_frac)
         self.recovery_conf = recovery_conf
         self.recovery_distance = recovery_distance
         self.duplicate_iou = duplicate_iou

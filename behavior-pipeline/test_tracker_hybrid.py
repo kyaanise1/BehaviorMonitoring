@@ -74,5 +74,44 @@ class HybridTests(unittest.TestCase):
         self.assertEqual(fn(object())[0], [10])
 
 
+class RefindTests(unittest.TestCase):
+    """The optional refind pass (refind_missed > 0)."""
+
+    @staticmethod
+    def _run(tr, frames):
+        out = []
+        for k, boxes in enumerate(frames):
+            ids, _, _ = tr.update(list(range(100 * k, 100 * k + len(boxes))), boxes, [0.9] * len(boxes))
+            out.append(ids)
+        return out
+
+    GONE_AND_BACK = ([[[100, 100, 40, 40], [300, 100, 40, 40]]] + [[[300, 100, 40, 40]]] * 6
+                     + [[[110, 100, 40, 40], [300, 100, 40, 40]]])
+
+    def test_off_by_default_is_the_earlier_tracker(self):
+        ids = self._run(tracker.HybridIDManager(max_missed=4), self.GONE_AND_BACK)
+        self.assertEqual(ids[0], [1, 2])
+        self.assertEqual(ids[-1], [3, 2])
+
+    def test_long_missing_bird_gets_its_id_back(self):
+        ids = self._run(tracker.HybridIDManager(max_missed=4, refind_missed=20), self.GONE_AND_BACK)
+        self.assertEqual(ids[-1], [1, 2])
+
+    def test_never_takes_a_box_a_seen_bird_claims(self):
+        # Bird 1 vanishes; bird 2 walks to where bird 1 was and keeps its own ID.
+        frames = [[[100, 100, 40, 40], [200, 100, 40, 40]]] + [[[200 - 15 * k, 100, 40, 40]] for k in range(1, 7)]
+        ids = self._run(tracker.HybridIDManager(max_missed=4, refind_missed=20), frames)
+        self.assertTrue(all(row == [2] for row in ids[1:]))
+
+    def test_id_is_released_after_refind_missed(self):
+        frames = [[[100, 100, 40, 40]]] + [[]] * 21 + [[[100, 100, 40, 40]]]
+        ids = self._run(tracker.HybridIDManager(max_missed=4, refind_missed=20), frames)
+        self.assertEqual(ids[-1], [2])
+
+    def test_refind_must_exceed_max_missed(self):
+        with self.assertRaises(ValueError):
+            tracker.HybridIDManager(max_missed=4, refind_missed=3)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
