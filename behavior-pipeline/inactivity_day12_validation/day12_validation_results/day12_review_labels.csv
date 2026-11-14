@@ -1,0 +1,24 @@
+﻿cvat_id,ground_truth_inactive,review_status,system_track_id,notes
+0,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+1,1,confirmed,15,Annotator confirmed this physical bird inactive for 30 min. System 15 is the positional match; verify identity match against video if needed.
+2,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+3,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+4,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+5,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+6,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+7,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+8,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+9,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+10,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+11,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+12,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+13,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+14,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+15,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+16,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+17,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+18,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+19,,exclude,,Need 661 visible sampled boxes covering 0–1800s; got 0.
+20,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+21,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.
+22,0,provisional,,Movement evidence only. Set review_status=confirmed after checking physical identity.

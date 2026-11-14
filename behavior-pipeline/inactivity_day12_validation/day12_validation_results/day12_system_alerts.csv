@@ -1,0 +1,2 @@
+﻿system_track_id,matched_cvat_id,first_alert_in_35min_s,alert_samples_in_35min,first_alert_in_scoring_window_s,alert_samples_in_scoring_window,summary_inactivity_frames_full_session
+15,1,1801.135,106,1801.135,5,106
