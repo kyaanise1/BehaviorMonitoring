@@ -1,0 +1,24 @@
+﻿cvat_id,ground_truth_inactive,system_pred_inactive,result,system_ids_alerting_this_bird,note
+0,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+1,1,1,TP,15,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+2,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+3,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+4,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+5,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+6,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+7,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+8,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+9,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+10,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+11,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+12,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+13,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+14,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+15,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+16,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+17,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+18,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+19,,,EXCLUDED_GT_COVERAGE,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+20,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+21,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.
+22,0,0,TN,,One verified CVAT bird-window; missing detector tracks are not tracking recall.

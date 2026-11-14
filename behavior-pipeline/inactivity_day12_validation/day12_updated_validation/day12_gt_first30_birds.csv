@@ -1,0 +1,24 @@
+﻿cvat_id,gt_inactive,gt_eligible,covered_cvat_samples,centroid_range_x_px,centroid_range_y_px,half_body_length_px,reason
+0,0,1,661,33.64,142.32,36.95,Verified CVAT centroid rule
+1,1,1,661,10.875,25.845,43.38,Verified CVAT centroid rule
+2,0,1,661,769.87,588.165,45.95,Verified CVAT centroid rule
+3,0,1,661,620.185,495.975,48.97,Verified CVAT centroid rule
+4,0,1,661,716.28,474.02,50.02,Verified CVAT centroid rule
+5,0,1,661,782.945,566.73,39.84,Verified CVAT centroid rule
+6,0,1,661,463.1,304.75,43.585,Verified CVAT centroid rule
+7,0,1,661,564.31,373.56,37.98,Verified CVAT centroid rule
+8,0,1,661,712.925,385.085,48.38,Verified CVAT centroid rule
+9,0,1,661,744.085,560.14,48.38,Verified CVAT centroid rule
+10,0,1,661,699.665,507.175,52.49,Verified CVAT centroid rule
+11,0,1,661,455.83,431.57,45.35,Verified CVAT centroid rule
+12,0,1,661,279.91,373.05,42.87,Verified CVAT centroid rule
+13,0,1,661,377.155,379.995,45.21,Verified CVAT centroid rule
+14,0,1,661,630.495,444.745,45.735,Verified CVAT centroid rule
+15,0,1,661,725.66,564.985,36.595,Verified CVAT centroid rule
+16,0,1,661,680.64,493.79,45.595,Verified CVAT centroid rule
+17,0,1,661,618.04,427.83,53.925,Verified CVAT centroid rule
+18,0,1,661,495.245,484.245,46.25,Verified CVAT centroid rule
+19,,0,0,,,,Insufficient full-window visible CVAT coverage
+20,0,1,661,734.265,570.52,45.935,Verified CVAT centroid rule
+21,0,1,661,667.015,442.85,48.74,Verified CVAT centroid rule
+22,0,1,661,174.97,517.9,37.7,Verified CVAT centroid rule

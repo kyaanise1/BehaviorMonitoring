@@ -1,0 +1,45 @@
+DAY 12: UPDATED HYBRID V2 INACTIVITY VALIDATION
+====================================================
+Independent ground truth: user-verified CVAT video XML (physical chicken tracks).
+CVAT tracks: 23; sampled frames: 771; frame step: 30; FPS: 11.000000
+FPS method: inferred from CVAT stop_frame / 35-minute duration (verify with ffprobe)
+30-min window spans 661 CVAT samples, covering 1800.000 s
+GT initial 30-min: 1 positive / 21 negative / 1 excluded
+System log rows: 1052; system observation rows: 21446
+System log coverage: 0.000–2099.364s
+System first sample after 30min: 1801.738s; predicted active alert IDs: [15]
+First alert: 1801.738s ID(s) [15]
+Last alert: 2099.364s ID(s) [15]
+Positive sampled log rows from 30–35min: 150 / 150
+All system positive IDs across 30–35min: [15]
+Unexpected PRE-30min alert samples: 0
+CVAT attribution of positive system IDs: {15: 1}
+Unmatched/ambiguous positive IDs: []
+
+INITIAL 30-MIN BIRD-WINDOW DECISIONS
+CM: TP=1, TN=21, FP=0, FN=0; n=22
+Accuracy: 100.00%
+Precision: 100.00%
+Recall: 100.00%
+F1: 100.00%
+Specificity: 100.00%
+
+30–35 MIN FLOCK-LEVEL SAMPLE AGREEMENT (CORRELATED)
+CM: TP=150, TN=0, FP=0, FN=0; n=150
+Accuracy: 100.00%
+Precision: 100.00%
+Recall: 100.00%
+F1: 100.00%
+Specificity: N/A
+
+METHODOLOGY / IMPORTANT LIMITATIONS
+- Binary per-bird scoring uses the FIRST 30-minute window only, not every frame as a fresh trial.
+- Full-window GT labels are computed from the independently verified CVAT boxes (including reviewed interpolation).
+- Half-body-length threshold is applied to each coordinate range independently.
+- CVAT and system IDs are NEVER assumed to be numerically identical; positive IDs need geometric matching.
+- TN means the system issued no inactivity alert for that GT-negative bird at the first 30-min decision;
+  it does not mean its tracker ID was accurate, persistent, or even visible.
+- The 30–35-minute flock timeline contains correlated 2-second observations and cannot be interpreted
+  as hundreds of independent successes. Its specificity is N/A if all GT samples are positive.
+- One positive physical bird cannot establish generalization to multiple inactivity events.
+- Check the actual CVAT video FPS and verify that the CVAT trim and system log start at the same moment.
