@@ -23,15 +23,19 @@ Or supply paths:
         --xml day12_annotations_validations.xml \
         --observations day12_nongap_observations.csv \
         --summary day12_nongap_summary.csv \
-        --video-duration-s 2100
+        --fps 15
 
 The first run creates OUTPUT/day12_review_labels.csv. Edit 'review_status' to
 'confirmed' only AFTER independently reviewing each bird/track. Re-run to
 recompute confirmed metrics. The label file is NEVER overwritten.
 
-Timing caution: CVAT XML contains original video frame indices (step=30), but
-not the video FPS. By default the script infers 11 FPS from CVAT stop_frame
-23100 / user-reported 35 minutes. Prefer --fps with FFprobe's actual FPS.
+Timing: CVAT XML contains original video frame indices (step=30), but not the
+video FPS. The Day 12 recording (Day_12_2026-09-08_0600_to_0700.mkv) is 15 FPS
+(1280x720, 53,949 frames), and the CVAT boxes line up with it only at 15 FPS:
+mean best IoU against detections 0.733 at 15 FPS, 0.310 at the 11 FPS this
+script used to infer from stop_frame 23100 / 2100 s. At 15 FPS the annotation
+covers 23100 / 15 = 1540 s (25.7 min), so it cannot validate the 30-minute rule
+by itself; the script says so instead of scoring. Pass --fps to override.
 """
 from __future__ import annotations
 
@@ -294,14 +298,15 @@ def main():
     parser.add_argument('--output-dir', type=Path, default=Path('day12_validation_results'))
     parser.add_argument('--labels', type=Path, default=None,
                         help='Editable review labels CSV; defaults to output_dir/day12_review_labels.csv')
-    parser.add_argument('--video-duration-s', type=float, default=2100.0,
-                        help='CVAT video duration, used to infer FPS if --fps absent (default 2100 s = 35 min)')
-    parser.add_argument('--fps', type=float, default=None, help='ACTUAL FPS of the CVAT-uploaded video (prefer ffprobe)')
+    parser.add_argument('--video-duration-s', type=float, default=None,
+                        help='CVAT video duration in seconds (default: stop_frame / fps)')
+    parser.add_argument('--fps', type=float, default=15.0,
+                        help='ACTUAL FPS of the CVAT-uploaded video (default 15: the Day 12 recording, checked by box alignment)')
     parser.add_argument('--window-s', type=float, default=1800.0, help='GT inactivity duration in seconds (default 1800)')
     parser.add_argument('--alert-grace-s', type=float, default=10.0,
                         help='Check system alerts from window_s to window_s+grace (default 10s)')
     args = parser.parse_args()
-    if args.video_duration_s <= 0 or args.window_s <= 0 or args.alert_grace_s < 0:
+    if (args.video_duration_s is not None and args.video_duration_s <= 0) or args.window_s <= 0 or args.alert_grace_s < 0:
         parser.error('Duration/window must be positive and grace >= 0.')
     try:
         tracks, metadata = parse_cvat(args.xml)
@@ -312,13 +317,18 @@ def main():
         if step <= 0:
             raise ValueError('Invalid CVAT frame step.')
         stop = int(metadata['stop_frame'])
-        fps = args.fps if args.fps else stop / args.video_duration_s
+        fps = args.fps
         if fps <= 0:
             raise ValueError('Video FPS must be positive.')
+        if args.video_duration_s is None:
+            args.video_duration_s = (stop + step) / fps
+        if args.window_s * fps > stop + step:
+            raise ValueError(
+                f'The CVAT annotation covers {(stop + step) / fps:.0f} s ({(stop + step) / fps / 60:.1f} min) at {fps:g} FPS, '
+                f'less than the {args.window_s:.0f} s observation window: the {args.window_s / 60:g}-minute rule cannot be '
+                'validated on it. Annotate at least that long, or pass a shorter --window-s for an exploratory check.')
         if args.window_s + args.alert_grace_s > args.video_duration_s + 1:
             raise ValueError('Prediction check extends beyond video duration.')
-        if args.window_s * fps > stop + step:
-            raise ValueError('CVAT video has fewer frames than the requested observation window.')
         audits = {id_: audit_one(id_, boxes, fps, step, args.window_s)
                   for id_, boxes in tracks.items()}
         args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -422,7 +432,7 @@ def main():
             'DAY 12 — INACTIVITY VALIDATION (INITIAL 30-MINUTE WINDOW)',
             '=======================================================',
             f'CVAT tracks: {len(tracks)}; sampled frames: {metadata["size"]}; frame step: {step}',
-            f'CVAT FPS used: {fps:.6f} ({"supplied --fps" if args.fps else "INFERRED from duration; confirm via FFprobe"})',
+            f'CVAT FPS used: {fps:g} (15 = the Day 12 recording, checked by box alignment; override with --fps)',
             f'GT window: 0.0–{args.window_s:.1f} seconds',
             f'System alert scoring window: {args.window_s:.1f}–{args.window_s+args.alert_grace_s:.1f} seconds',
             f'System VALID observation rows within first {args.video_duration_s:g} s: {valid_rows}',

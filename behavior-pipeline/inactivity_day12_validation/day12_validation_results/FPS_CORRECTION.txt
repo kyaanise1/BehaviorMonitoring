@@ -1,0 +1,21 @@
+FPS CORRECTION (added 2026-11-16) -- read before using the files in this folder
+
+The results here were computed with FPS = 11, which validate_inactivity_day12.py used to infer from
+CVAT stop_frame 23100 / an assumed 2100 s (35 min). The Day 12 recording is 15 FPS:
+
+  Day_12_2026-09-08_0600_to_0700.mkv: 1280x720, 15.0 FPS, 53,949 frames.
+  The CVAT boxes match YOLO detections on that video (mean best IoU per box, 78 pictures checked) only at 15 FPS:
+      10 FPS 0.295 | 11 FPS 0.310 | 12 FPS 0.354 | 12.5 FPS 0.383 | 14 FPS 0.489 | 15 FPS 0.733
+
+So the annotation covers 23100 / 15 = 1540 s (25.7 min), not 35 min, and every time in these files is
+off by a factor of 15/11. In particular:
+  - "GT window 0-1800 s" was really 0-1320 s of video (22 min): CVAT ID 1 was confirmed still for
+    22-26 minutes of footage, not 30.
+  - The system alert at ~1801 s (system ID 15) was compared against ground truth that ends earlier.
+
+The 30-minute rule therefore cannot be validated on this annotation. The script now defaults to 15 FPS
+and stops with that explanation. A shorter --window-s is not a fair substitute either: the system only
+alerts after 1800 s, so with --window-s 1500 it scores CVAT ID 1 as a miss (FN) it never had time to flag.
+
+To validate the rule, annotate (or extend) Day 12 to at least 1800 s + a margin, e.g. frames 0-28500
+at step 30, then rerun:  python validate_inactivity_day12.py
