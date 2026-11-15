@@ -1,0 +1,24 @@
+﻿cvat_id,candidate,samples_first_30m,visible_samples_first_30m,manual_keyframes_first_30m,manual_dx_px,manual_dy_px,half_body_length_px,outside_first_30m,occluded_first_30m,last_manual_keyframe_s,notes
+0,NEGATIVE_CANDIDATE,661,661,25,33.64,142.32,36.95,0,0,1666.36,Manually placed keyframes show movement exceeding half median body length.
+1,POSSIBLE_POSITIVE_REVIEW,661,661,13,10.88,25.85,43.38,0,0,799.09,Movement at keyframes alone does not establish 30 minutes of inactivity.
+2,NEGATIVE_CANDIDATE,661,661,379,769.87,588.16,45.95,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+3,NEGATIVE_CANDIDATE,661,661,415,620.18,495.98,48.97,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+4,NEGATIVE_CANDIDATE,661,661,358,716.28,474.02,50.02,0,0,1797.27,Manually placed keyframes show movement exceeding half median body length.
+5,NEGATIVE_CANDIDATE,661,661,358,782.95,566.73,39.84,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+6,NEGATIVE_CANDIDATE,661,661,291,463.10,304.75,43.58,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+7,NEGATIVE_CANDIDATE,661,661,375,564.31,373.56,37.98,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+8,NEGATIVE_CANDIDATE,661,661,318,712.93,385.08,48.38,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+9,NEGATIVE_CANDIDATE,661,661,474,744.09,560.14,48.38,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+10,NEGATIVE_CANDIDATE,661,661,336,699.66,507.17,52.49,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+11,NEGATIVE_CANDIDATE,661,661,361,455.83,431.57,45.35,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+12,NEGATIVE_CANDIDATE,661,661,287,279.91,373.05,42.87,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+13,NEGATIVE_CANDIDATE,661,661,188,377.16,380.00,45.21,0,0,1775.45,Manually placed keyframes show movement exceeding half median body length.
+14,NEGATIVE_CANDIDATE,661,661,427,630.50,444.75,45.74,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+15,NEGATIVE_CANDIDATE,661,661,311,725.66,564.99,36.59,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+16,NEGATIVE_CANDIDATE,661,661,328,680.64,493.79,45.59,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+17,NEGATIVE_CANDIDATE,661,661,355,618.04,427.83,53.93,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+18,NEGATIVE_CANDIDATE,661,661,320,495.24,484.24,46.25,0,0,1797.27,Manually placed keyframes show movement exceeding half median body length.
+19,INSUFFICIENT_COVERAGE,0,0,0,,,,0,0,,Need 661 visible sampled boxes covering 0–1800s; got 0.
+20,NEGATIVE_CANDIDATE,661,661,424,734.26,570.52,45.94,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+21,NEGATIVE_CANDIDATE,661,661,314,667.01,442.85,48.74,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.
+22,NEGATIVE_CANDIDATE,661,661,223,174.97,517.90,37.70,0,0,1800.00,Manually placed keyframes show movement exceeding half median body length.

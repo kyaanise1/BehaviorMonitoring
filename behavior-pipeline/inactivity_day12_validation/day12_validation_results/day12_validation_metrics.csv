@@ -1,0 +1,3 @@
+﻿tier,evaluated_cases,TP,TN,FP,FN,accuracy,precision,recall,f1,specificity,caveat
+CONFIRMED_ONLY,1,1,0,0,0,1.000000,1.000000,1.000000,1.000000,,Human-confirmed CVAT labels only.
+INCLUDING_PROVISIONAL,22,1,21,0,0,1.000000,1.000000,1.000000,1.000000,1.000000,Research audit only; movement-based negatives need identity review.
