@@ -1,0 +1,126 @@
+OPTION B — CONSECUTIVE CENTROID STILLNESS (EXPERIMENTAL)
+======================================================
+
+PURPOSE
+-------
+Separate alternative to your Option A rolling 450 px activity detector.
+Preserves the original Hybrid V2 tracker and huddling code.
+It does NOT reuse Option A's 450 px threshold.
+
+RULE
+----
+Every chicken ID has a stationary anchor, smoothed centroid, and its own
+estimated body length L_j (median of up to 30 recent max(box_w,box_h)).
+
+  distance = EuclideanDistance(smoothed_centroid, stillness_anchor)
+  tolerance = stillness_tolerance_bl * L_j
+
+When distance > tolerance, restart that chicken's stillness clock at 0.
+This anchor check prevents many tiny successive steps from hiding slow travel.
+A long observation gap (>6s by default) resets the timer.
+A very large sudden jump is flagged as a possible ID switch and also resets.
+The smoothing is CAUSAL/trailing median3, not the retrospective centered
+median3 from Option A. So 450px and its results are NOT comparable to this.
+
+Warning states for each currently detected track:
+  NONE            <=5 minutes of unbroken qualifying positional stillness
+  YELLOW          > 5 minutes
+  ORANGE          >15 minutes
+  RED             >30 minutes (sets n_inactive, inactive_ids)
+  UNDETERMINED    probable jump, or insufficient coverage despite duration
+
+These are warnings about centroid positional stillness, not medical diagnosis.
+A bird can turn its body without enough centroid displacement to reset.
+
+The 0.5 body-length tolerance is a PROVISIONAL engineering heuristic, not
+published by Ehsan. It must be calibrated and validated independently using
+video-verified behavior labels at the tested growth stages. The code cannot
+fully verify stable track IDs or detect frozen/corrupt footage.
+
+INSTALLATION
+------------
+From this ZIP, copy these three files into:
+  behavior-pipeline\hybridv2 behavior validation\
+
+  behavior_inactivity_consecutive.py
+  run_behavior_system_consecutive.py
+  test_consecutive.py
+
+Do not overwrite run_behavior_system_broilernet_smoothed.py or its inactivity
+module; keep Option A separately as your comparison/baseline.
+
+RUN ON DAY 10 VIDEO (PowerShell)
+--------------------------------
+From behavior-pipeline folder:
+
+python ".\hybridv2 behavior validation\run_behavior_system_consecutive.py" `
+  --source ".\hybridv2 behavior validation\Day_10_2026-09-06_1500_to_1600.mkv" `
+  --weights "..\runs\broiler_yolo11n\weights\best.pt" `
+  --tracker ".\configs\bytetrack_broiler.yaml" `
+  --zones ".\configs\feeding_zones.json" `
+  --interval 2 `
+  --window 1800 `
+  --smoothing median3 `
+  --stillness-tolerance-bl 0.5 `
+  --min-fill 0.95 `
+  --max-gap-s 6 `
+  --inactivity-observations-csv ".\results\D10_optionB\observations.csv" `
+  --log-csv ".\results\D10_optionB\system_log.csv" `
+  --annotated-video ".\results\D10_optionB\stillness_markers.mp4"
+
+The annotated review MP4 uses the processed sample frames (2s apart). Default
+playback is 1 FPS = 2x video speed. For real-time playback add:
+  --annotated-video-fps 0.5
+
+If your filename/folders differ, update --source/--weights appropriately.
+You can also omit --annotated-video to save processing time and disk space.
+
+CSV OUTPUTS
+-----------
+observations.csv: one row for each currently tracked chicken on each sample.
+Important columns:
+  track_id
+  stillness_duration_s
+  stillness_minutes
+  individual_body_length_px
+  movement_tolerance_px
+  distance_from_anchor_px
+  observation_gap_s
+  raw_step_px
+  significant_movement
+  reset_reason
+  reset_count
+  streak_fill_ratio
+  marker
+  inactive
+
+system_log.csv: preserves legacy first eight columns for compatibility.
+  n_inactive           = number of RED birds in current sample
+  inactive_ids         = IDs with RED marker
+  n_yellow/n_orange/n_red/n_undetermined = current marker counts
+  stillness_markers_by_id     e.g. 15:YELLOW|16:NONE
+  stillness_minutes_by_id     e.g. 15:6.22|16:1.13
+
+Only currently observed birds are shown in marker counts. Missing birds are
+not automatically considered active. Following a gap > --max-gap-s, the
+stillness streak restarts when the bird is observed again.
+
+UNIT TESTS
+----------
+From behavior-pipeline directory:
+  python ".\hybridv2 behavior validation\test_consecutive.py"
+
+Tests cover exact boundary times, motion reset, slow drift, missing frames,
+identity-jump detection, individual body lengths, coverage and input errors.
+A stubbed runner smoke test also confirmed CSV outputs and MP4 writing.
+Full YOLO inference has NOT been run in this environment.
+
+SCIENTIFIC CONSTRAINTS
+----------------------
+- Don't call this 'Ehsan's 20px in 50frames': that's the paper's GT labeling
+  criterion, not your new Option B movement tolerance.
+- A per-bird 0.5*estimated-body-length is a trial tolerance, not validated.
+- Don't claim diagnostic accuracy until video-confirmed positive/negative cases
+  are evaluated at full 30min periods across independent birds/days.
+- An ID switch can mimic movement or stillness; manually review overlays.
+- The source video must be continuous and timestamp-correct.
