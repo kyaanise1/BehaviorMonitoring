@@ -1,5 +1,6 @@
 """Shared helpers: low-rate frame sampling for video files and live streams."""
 import glob
+import math
 import os
 import time
 import cv2
@@ -8,7 +9,9 @@ import cv2
 def sample_frames(source, interval_s=2.0, live=False):
     """Yield (t_seconds, sample_number, frame), one frame every interval_s.
 
-    File mode : t is video time (frame_index / fps); sample_number starts at 1.
+    File mode : sample the nearest frame to 0, interval_s, 2*interval_s, ...
+                using the video's reported FPS (constant-frame-rate assumption).
+                t is the ACTUAL selected frame index / fps; sample number starts at 1.
     Live mode : t is seconds since start; the stream is read continuously so
                 the buffer never goes stale, and one frame is kept per interval.
     """
@@ -45,16 +48,28 @@ def sample_frames(source, interval_s=2.0, live=False):
             fps = cap.get(cv2.CAP_PROP_FPS)
             if fps <= 0:
                 raise RuntimeError("Could not read FPS from the video.")
-            step = max(1, round(fps * interval_s))
+            if not math.isfinite(fps) or not math.isfinite(interval_s) or interval_s <= 0:
+                raise RuntimeError("Video FPS and sampling interval must be finite and positive.")
+            # A single fixed frame step drifts when fps * interval_s is noninteger.
+            # Schedule frames from absolute target times instead; rounding makes
+            # the selected frame at most ~0.5 video frame from each target time.
+            target_no = 0
+            next_index = 0
             i = 0
             while True:
                 if not cap.grab():
                     break
-                if i % step == 0:
+                if i >= next_index:
                     ok, frame = cap.retrieve()
                     if ok:
                         n += 1
+                        # Preserve actual time of selected frame, not idealized time.
                         yield i / fps, n, frame
+                    target_no += 1
+                    # Prevent reusing one frame if desired interval < 1/fps.
+                    next_index = max(i + 1, int(math.floor(
+                        target_no * fps * interval_s + 0.5)))
                 i += 1
     finally:
         cap.release()
+

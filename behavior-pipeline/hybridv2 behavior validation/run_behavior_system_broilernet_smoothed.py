@@ -53,7 +53,8 @@ def main():
     ap.add_argument('--smoothing', choices=['raw','median3','median5'], default='median3',
                     help='Median filter before accumulating distances; median3 is experimental default')
     ap.add_argument('--min-fill', type=float, default=0.95,
-                    help='Minimum fraction of expected samples (default: 0.95, not original 0.50)')
+                    help='Minimum frac' \
+                    'tion of expected samples (default: 0.95, not original 0.50)')
     ap.add_argument('--max-gap-s', type=float, default=None,
                     help='Maximum allowed gap between samples for one ID (default: 3 * interval)')
     ap.add_argument('--diagnostics-only', action='store_true',
