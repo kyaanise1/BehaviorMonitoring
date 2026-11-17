@@ -1,0 +1,42 @@
+DAY 12 TIMING: WHY 15 FPS, AND WHY THE REPAIRED MP4 CANNOT BE USED FOR TIMED CHECKS
+====================================================================================
+
+1. The recording is 15 fps.
+   Day_12_2026-09-08_0600_to_0700.mkv: 1280x720, 15.0 fps in its header, 53,949 frames = 59.9 min, matching its
+   06:00-07:00 name. (At 11 fps it would have to be 82 minutes long.)
+
+2. The CVAT frame numbers count frames of that recording, so time = frame / 15.
+   finald12_annotations.xml: stop_frame 23100, step=30 -> one picture every 2 s, 23100 / 15 = 1540 s = 25.7 min.
+   Do NOT rescale the frame numbers. frame * 15 / 11.01, then / 15, is the same as frame / 11.01; that is why the
+   old finald12_annotations_15fps.xml (now removed) still ended at 35.0 min and was still mis-timed.
+
+3. Measured, not assumed (check_cvat_fps.py, run of run_behavior_system_broilernet_smoothed.py on the ORIGINAL mkv,
+   Option A settings: median3, 450 px, min-fill 0.95, max gap 6 s;
+   results/Day12_original_15fps_broilernet450/):
+
+      fps     CVAT boxes with a tracked bird inside   annotation length
+      11.01                 50.3 %                        35.0 min
+      14.00                 71.5 %                        27.5 min
+      14.50                 78.4 %                        26.6 min
+      15.00                 91.1 %   <- best              25.7 min
+      15.50                 76.7 %                        24.8 min
+      16.00                 71.2 %                        24.1 min
+
+   An independent check with the deployed detector's boxes gives the same answer: mean best IoU 0.757 at 15 fps,
+   0.58 at 14.5, 0.32 at 11.
+
+4. Day12_repaired.mp4 does not keep real time.
+   The runs in results/Day12_15fps_broilernet450/ (and the earlier Day 12 runs) were made on Day12_repaired.mp4.
+   Matched against detections from the original recording, their t_s is NOT real time and not a fixed scale of it
+   either: the best fit drifts between about 0.63 x and 0.9 x real time across the clip (frames dropped or
+   re-timed by the repair). No single fps can line the CVAT annotation up with those runs, so their timed
+   validation numbers (30-minute alerts, CVAT matches) should not be quoted. Their "30 minutes" is about
+   19-27 real minutes.
+
+5. Consequences.
+   * The annotation covers 25.7 real minutes, so it cannot score a 30-minute window by itself;
+     validate_day12_inactivity_updated.py now uses --fps 15 by default and says so instead of scoring.
+   * For timed checks, run the pipeline on the original .mkv (sample_frames uses the header fps, which is right
+     there). OpenCV prints matroska/mpeg4 warnings on this file and decoding stops at about 50.8 min (3046 s);
+     the first 50 minutes, which include the whole annotation, decode normally.
+   * To validate the 30-minute rule, annotate at least 30 real minutes (e.g. source frames 0-27000+ at step 30).

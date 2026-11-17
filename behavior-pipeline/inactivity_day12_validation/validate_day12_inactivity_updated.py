@@ -31,9 +31,17 @@ What is evaluated:
      are NOT independent detection events or birds.
 
 Important: CVAT XML uses SOURCE FRAME numbers, NOT CVAT display indices.
-Its FPS is not embedded: the default 11.0 FPS is inferred from the
-35-minute clip and XML stop_frame 23100; check with ffprobe and set --fps
-if different. The user independently verified the CVAT tracks.
+Its FPS is not embedded. The source frames are frames of the original
+Day_12_2026-09-08_0600_to_0700.mkv, which is 15 FPS, so the default is 15:
+the 23,100 annotated frames cover 23100 / 15 = 1540 s (25.7 min). The old
+default (stop_frame / an assumed 35-minute clip = 11 FPS) put every box at
+the wrong moment; video/check_cvat_fps.py measures this (boxes sit on the
+tracked birds only at 15 FPS). Do not rescale the XML frame numbers.
+The observations and log must come from a run on the ORIGINAL video:
+Day12_repaired.mp4 does not keep real time (see video/FPS_NOTE.txt).
+Because the annotation is shorter than 30 minutes, the 30-minute check
+stops with a message instead of scoring. The user independently verified
+the CVAT tracks.
 """
 from __future__ import annotations
 import argparse
@@ -218,19 +226,22 @@ def main():
     ap.add_argument('--log',type=Path,default=Path('behavior_system_log.csv'))
     ap.add_argument('--observations',type=Path,default=Path('inactivity_observations.csv'))
     ap.add_argument('--output-dir',type=Path,default=Path('day12_updated_validation'))
-    ap.add_argument('--fps',type=float,default=None,help='Actual FPS of CVAT-uploaded MP4; else infer from duration')
-    ap.add_argument('--duration-s',type=float,default=2100.0,help='Duration of CVAT video in seconds (default: 35 min)')
+    ap.add_argument('--fps',type=float,default=15.0,help='FPS of the source video the CVAT frame numbers count (default: 15, the Day 12 recording)')
+    ap.add_argument('--duration-s',type=float,default=None,help='Only if --fps is 0: infer FPS as stop_frame / this duration')
     ap.add_argument('--window-s',type=float,default=1800.0,help='Inactivity window seconds (default: 1800)')
     ap.add_argument('--time-offset-s',type=float,default=0.0,help='CVAT clip start offset relative to system log')
     ap.add_argument('--match-max-median-px',type=float,default=45.0)
     ap.add_argument('--initial-alert-tolerance-s',type=float,default=5.0,
                     help='Max delay after 1800 s allowed for first system decision')
     args=ap.parse_args()
-    if min(args.duration_s,args.window_s,args.match_max_median_px,args.initial_alert_tolerance_s)<=0:
-        ap.error('FPS/window/duration/match threshold/initial tolerance must be positive.')
+    if args.fps < 0 or (args.fps == 0 and not args.duration_s):
+        ap.error('--fps must be positive (or 0 together with --duration-s).')
+    if min(args.window_s,args.match_max_median_px,args.initial_alert_tolerance_s)<=0:
+        ap.error('Window/match threshold/initial tolerance must be positive.')
     try:
         tracks, step, stop, count = parse_xml(args.xml)
-        fps = args.fps if args.fps is not None else stop / args.duration_s
+        fps = args.fps if args.fps > 0 else stop / args.duration_s
+        print(f'CVAT timing: frame / {fps:g} fps -> annotation covers {stop / fps:.0f} s ({stop / fps / 60:.1f} min)')
         if fps<=0: raise ValueError('FPS must be positive')
         frame_interval=step/fps
         needed_steps=round(args.window_s/frame_interval)
@@ -337,7 +348,7 @@ def main():
         timeline=[];cm_flock=Counter()
         last_gt_by_idx={}
         for t,ids,n in log_records:
-            if t < args.time_offset_s+args.window_s-0.01 or t > args.time_offset_s+args.duration_s+0.01:
+            if t < args.time_offset_s+args.window_s-0.01 or t > args.time_offset_s+stop/fps+0.01:
                 continue
             gt_idx=int(round((t-args.time_offset_s)/frame_interval))
             if gt_idx not in last_gt_by_idx:
@@ -399,7 +410,7 @@ def main():
             '='*52,
             'Independent ground truth: user-verified CVAT video XML (physical chicken tracks).',
             f'CVAT tracks: {len(tracks)}; sampled frames: {count}; frame step: {step}; FPS: {fps:.6f}',
-            f'FPS method: {"supplied --fps" if args.fps is not None else "inferred from CVAT stop_frame / 35-minute duration (verify with ffprobe)"}',
+            f'FPS method: {"--fps (source video frame rate)" if args.fps > 0 else "inferred from CVAT stop_frame / --duration-s (verify with video/check_cvat_fps.py)"}',
             f'30-min window spans {needed_steps+1} CVAT samples, covering {needed_steps*frame_interval:.3f} s',
             f'GT initial 30-min: {n_gtpositive} positive / {n_gtnegative} negative / {len(tracks)-len(known_ids)} excluded',
             f'System log rows: {len(log_records)}; system observation rows: {len(observations)}',
