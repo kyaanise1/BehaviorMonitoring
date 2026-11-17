@@ -1,0 +1,2 @@
+﻿system_id,cvat_id,paired_observations,median_center_distance_px,second_best_median_distance_px,post30_samples,post30_median_distance_px,post30_p90_distance_px,mapping_result,at_first_threshold
+15,1,900,6.539,170.437,150,22.62,24.466,Matched by CVAT/system trajectory; not numeric ID,1

@@ -1,0 +1,3 @@
+﻿scope,unit,TP,TN,FP,FN,n,accuracy,precision,recall,f1,specificity
+INITIAL_30MIN_BIRD_ALERT_DECISION,"One independently labeled physical chicken, first 30-min window",1,21,0,0,22,1.0,1.0,1.0,1.0,1.0
+SLIDING_30MIN_FLOCK_SAMPLE,Correlated system samples over 30–35 min (not independent events),150,0,0,0,150,1.0,1.0,1.0,1.0,
