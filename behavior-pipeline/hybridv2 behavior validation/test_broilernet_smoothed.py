@@ -60,6 +60,72 @@ class Tests(unittest.TestCase):
         self.assertEqual(row['inactive'],'')
         self.assertEqual(row['activity_ok'],'')
 
+    # ---- block30: activity in body lengths on 30-s block means (added 17 Nov 2026) ----
+    @staticmethod
+    def _jitter(i, amp):
+        # deterministic detector-like jitter of +-amp px around a fixed point
+        return (100 + amp * ((i * 7919) % 11 - 5) / 5, 200 + amp * ((i * 104729) % 13 - 6) / 6)
+
+    def test_block30_still_bird_with_jitter_is_inactive(self):
+        mod = InactivityModule(smoothing='block30', activity_threshold_bl=4.0, min_fill=0.8, max_gap_s=60)
+        r, row = run(mod, lambda i: self._jitter(i, 6))
+        self.assertEqual(r.inactive, [15])
+        self.assertLess(float(row['block_activity_bl']), 1.0)
+        # the old per-picture sum of the same jitter would be far above 450 px
+        self.assertGreater(float(row['raw_activity_px']), 450)
+
+    def test_block30_walking_bird_is_active(self):
+        mod = InactivityModule(smoothing='block30', activity_threshold_bl=4.0, min_fill=0.8, max_gap_s=60)
+        r, row = run(mod, lambda i: (100 + 0.5 * i, 200))   # 450 px = 5.6 BL over 30 min
+        self.assertEqual(r.inactive, [])
+        self.assertGreater(float(row['cumulative_activity_bl']), 4.0)
+
+    def test_block30_same_answer_at_any_sampling(self):
+        # A still bird with detector jitter, sampled every 2, 4 or 6 s. The old px sum changes several-fold
+        # with sampling (one jitter step per picture); block30 changes far less, and the decision is the same.
+        def scores(smoothing, **kw):
+            out, flags = [], []
+            for step in (2, 4, 6):
+                mod = InactivityModule(interval=step, smoothing=smoothing, min_fill=0.8, max_gap_s=60, **kw)
+                res = None
+                for n in range(1800 // step + 1):
+                    t = n * step
+                    res = mod.observe(t, [15], [[*self._jitter(t // 2, 6), 80, 80]], audit=True)
+                row = dict(zip(AUDIT_FIELDS, res.audit_rows[0]))
+                out.append(float(row['cumulative_activity_px'])); flags.append(res.inactive)
+            return out, flags
+        old, _ = scores('median3', activity_threshold_px=450)
+        new, flags = scores('block30', activity_threshold_bl=4.0)
+        self.assertGreater(max(old) / min(old), 2.0)
+        self.assertLess(max(new) / min(new), max(old) / min(old) / 1.5)
+        self.assertEqual(flags, [[15], [15], [15]])
+        self.assertLess(max(new) / 80, 4.0)
+
+    def test_block30_scales_with_body_length(self):
+        # the same walk is fewer body lengths for a bigger bird
+        small = InactivityModule(smoothing='block30', activity_threshold_bl=4.0, min_fill=0.8, max_gap_s=60)
+        big = InactivityModule(smoothing='block30', activity_threshold_bl=4.0, min_fill=0.8, max_gap_s=60)
+        walk = lambda i: (100 + 0.4 * i, 200)   # 360 px
+        _, rs = run(small, walk)
+        r_big = None
+        for i in range(901):
+            r_big = big.observe(i * 2, [15], [[*walk(i), 160, 160]], audit=True)
+        rb = dict(zip(AUDIT_FIELDS, r_big.audit_rows[0]))
+        self.assertGreater(float(rs['cumulative_activity_bl']), 4.0)
+        self.assertLess(float(rb['cumulative_activity_bl']), 4.0)
+
+    def test_block30_allows_short_detector_gaps(self):
+        mod = InactivityModule(smoothing='block30', activity_threshold_bl=4.0, min_fill=0.8, max_gap_s=60)
+        missing = {k for g in range(50, 900, 60) for k in range(g, g + 4)}   # an 8-10 s gap every 2 minutes
+        r, row = run(mod, lambda i: (100, 200), missing=missing)
+        self.assertEqual(int(row['eligible']), 1)
+        self.assertEqual(r.inactive, [15])
+
+    def test_range_bl_is_reported(self):
+        mod = InactivityModule(smoothing='block30', activity_threshold_bl=4.0, min_fill=0.8, max_gap_s=60)
+        _, row = run(mod, lambda i: (100 + (i % 2) * 20, 200))
+        self.assertAlmostEqual(float(row['range_bl']), 0.25, places=2)
+
     def test_no_alert_before_30min(self):
         model=InactivityModule(smoothing='median3')
         r=None

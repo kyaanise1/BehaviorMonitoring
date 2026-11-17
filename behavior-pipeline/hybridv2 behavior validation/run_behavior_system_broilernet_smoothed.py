@@ -50,12 +50,14 @@ def main():
     ap.add_argument('--window', type=float, default=1800.0)
     ap.add_argument('--activity-threshold-px', type=float, default=450.0,
                     help='PROVISIONAL 30-minute cumulative Euclidean distance threshold (default: 450 pixels)')
-    ap.add_argument('--smoothing', choices=['raw','median3','median5'], default='median3',
-                    help='Median filter before accumulating distances; median3 is experimental default')
-    ap.add_argument('--min-fill', type=float, default=0.95,
-                    help='Minimum fraction of expected samples (default: 0.95, not original 0.50)')
+    ap.add_argument('--activity-threshold-bl', type=float, default=None,
+                    help='block30 threshold in body lengths per window (default 4.0 with block30; PROVISIONAL)')
+    ap.add_argument('--smoothing', choices=['raw','median3','median5','block30'], default='block30',
+                    help='block30 (default): 30-s block means, threshold in body lengths; raw/median3/median5: old px rule')
+    ap.add_argument('--min-fill', type=float, default=None,
+                    help='Minimum fraction of expected samples (default: 0.8 with block30, 0.95 otherwise)')
     ap.add_argument('--max-gap-s', type=float, default=None,
-                    help='Maximum allowed gap between samples for one ID (default: 3 * interval)')
+                    help='Maximum allowed gap between samples for one ID (default: 60 s with block30, 3 * interval otherwise)')
     ap.add_argument('--diagnostics-only', action='store_true',
                     help='Compute activity scores but do NOT output inactivity classifications')
     ap.add_argument('--min-huddle', type=int, default=3)
@@ -78,6 +80,17 @@ def main():
     ap.add_argument('--log-csv', default='behavior_system_log.csv')
     args = ap.parse_args()
 
+    # block30 (default): thresholds in body lengths, 80 % coverage, gaps up to 60 s. Passing
+    # --smoothing raw/median3/median5 keeps the old px rule and its old defaults exactly.
+    if args.smoothing == 'block30':
+        if args.activity_threshold_bl is None:
+            args.activity_threshold_bl = 4.0
+        if args.min_fill is None:
+            args.min_fill = 0.8
+        if args.max_gap_s is None:
+            args.max_gap_s = 60.0
+    elif args.min_fill is None:
+        args.min_fill = 0.95
     if args.activity_threshold_px <= 0:
         ap.error('--activity-threshold-px must be positive')
     if args.max_gap_s is not None and args.max_gap_s < args.interval:
@@ -143,7 +156,11 @@ def main():
     print('NOTICE: per-ID observation gap/coverage checks ON. Frozen footage and identity switches are NOT detected.')
     print(f'INACTIVITY MODE: Option A cumulative Euclidean displacement; smoothing={args.smoothing}; rolling {args.window:g}s.')
     print('THRESHOLD: ' + ('DIAGNOSTICS ONLY' if args.diagnostics_only else
-                          f'{args.activity_threshold_px:g} px (PROVISIONAL, NOT VALIDATED)'))
+                          (f'{args.activity_threshold_bl:g} body lengths per window (PROVISIONAL, NOT VALIDATED)'
+                           if args.activity_threshold_bl is not None else
+                           f'{args.activity_threshold_px:g} px (PROVISIONAL, NOT VALIDATED)')))
+    print(f'ELIGIBILITY: min-fill {args.min_fill:g}, max gap '
+          + (f'{args.max_gap_s:g} s' if args.max_gap_s is not None else f'{3 * args.interval:g} s (3 x interval)'))
     print('Feeder handling: ' + ('hard centroid exclusion (legacy)' if args.hard_feeder_exclusion
                                    else 'cluster-level overlap filtering (no automatic centroid exclusion)'))
 
@@ -161,7 +178,8 @@ def main():
         window=args.window, interval=args.interval,
         activity_threshold_px=None if args.diagnostics_only else args.activity_threshold_px,
         min_fill=args.min_fill, max_gap_s=args.max_gap_s,
-        smoothing=args.smoothing)
+        smoothing=args.smoothing,
+        activity_threshold_bl=None if args.diagnostics_only else args.activity_threshold_bl)
     huddling_module = HuddlingModule(feeding_zones, ref_size, args.min_huddle,
                                       args.huddle_method, args.cluster_zone_overlap,
                                       args.local_recovery, bool(thresholds), args.feeder_margin_px)

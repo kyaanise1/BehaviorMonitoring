@@ -50,14 +50,25 @@ def main():
     p.add_argument('--interval',type=float,default=2)
     p.add_argument('--activity-threshold-px',type=float,default=450,
                    help='PROVISIONAL score threshold; must be separately calibrated')
-    p.add_argument('--smoothing',choices=('raw','median3','median5'),default='median3')
-    p.add_argument('--min-fill',type=float,default=0.95)
+    p.add_argument('--smoothing',choices=('raw','median3','median5','block30'),default='median3')
+    p.add_argument('--activity-threshold-bl',type=float,default=None,
+                   help='block30 threshold in body lengths (default 4.0 with block30)')
+    p.add_argument('--min-fill',type=float,default=None,help='default 0.8 with block30, 0.95 otherwise')
     p.add_argument('--max-gap-s',type=float,default=None)
     p.add_argument('--diagnostics-only',action='store_true',
                    help='Do not assign inactive 0/1; export scores for calibration')
     p.add_argument('--compare-thresholds',default='350,400,450,500,550',
                    help='Candidate values for descriptive sweep; do NOT call these validated')
     args=p.parse_args()
+    if args.smoothing == 'block30':
+        if args.activity_threshold_bl is None:
+            args.activity_threshold_bl = 4.0
+        if args.min_fill is None:
+            args.min_fill = 0.8
+        if args.max_gap_s is None:
+            args.max_gap_s = 60.0
+    elif args.min_fill is None:
+        args.min_fill = 0.95
     if args.activity_threshold_px <= 0:
         p.error('--activity-threshold-px must be > 0')
     try:
@@ -78,7 +89,9 @@ def main():
                              activity_threshold_px=(None if args.diagnostics_only
                                                     else args.activity_threshold_px),
                              min_fill=args.min_fill,max_gap_s=args.max_gap_s,
-                             smoothing=args.smoothing)
+                             smoothing=args.smoothing,
+                             activity_threshold_bl=(None if args.diagnostics_only
+                                                    else args.activity_threshold_bl))
         args.out_dir.mkdir(parents=True,exist_ok=True)
         obs_out=args.out_dir/'smoothed_inactivity_observations.csv'
         log_out=args.out_dir/'smoothed_system_log.csv'

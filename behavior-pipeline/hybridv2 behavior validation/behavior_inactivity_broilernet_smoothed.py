@@ -11,6 +11,17 @@ uses a truncated neighborhood. It intentionally suppresses short movements,
 so the choice and threshold require independent validation.
 
 Not the published Broiler-Net threshold. Threshold 450 px is PROVISIONAL.
+
+smoothing='block30' (added on bytetrack-tuning, 17 Nov 2026) measures activity
+so that one threshold means the same thing at any sampling rate and bird size:
+the centre is averaged over 30-s blocks (this removes detector jitter, which a
+step-by-step sum adds up once per picture), the path between block means is
+summed, and it is divided by the flock's median body length. The decision is
+activity_bl < activity_threshold_bl (default 4.0 body lengths per 30 min).
+Why: on the original Day 12 mkv the same still bird (15) scores 551 / 373 /
+302 px at 2 / 4 / 6 s sampling with median3, but 1.89 / 2.00 / 2.08 BL with
+block30; the next stillest bird scores 9.4 BL. 4.0 BL is PROVISIONAL: choose
+it on one day and test it on another, on the original video.
 Never treats missing observations as stationary, and never interpolates gaps.
 Suspected ID switches are AUDITED, not silently removed or corrected.
 """
@@ -36,6 +47,7 @@ AUDIT_FIELDS = _BASE_FIELDS + [
     'median5_activity_px', 'max_raw_step_px', 'possible_id_jump',
     'activity_difference_from_raw_px',
     'cumulative_activity_level_px',  # user-facing alias for cumulative_activity_px
+    'activity_threshold_bl', 'block_activity_bl', 'range_bl',
 ]
 
 
@@ -57,6 +69,15 @@ def _median_filtered(coords, size):
     return out
 
 
+def _block_means(points, block_s):
+    """Mean (x, y) of the points in each block_s-second block, in time order; points are (t, x, y)."""
+    blocks = defaultdict(list)
+    for t, x, y in points:
+        blocks[int(t // block_s)].append((x, y))
+    return [(sum(p[0] for p in b) / len(b), sum(p[1] for p in b) / len(b))
+            for _, b in sorted(blocks.items())]
+
+
 def _path_length(coords):
     return sum(hypot(b[0]-a[0], b[1]-a[1])
                for a, b in zip(coords, coords[1:]))
@@ -75,13 +96,19 @@ class InactivityModule:
     def __init__(self, window=1800.0, interval=2.0,
                  activity_threshold_px=450.0, min_fill=0.95,
                  max_gap_s=None, smoothing='median3',
-                 jump_audit_bodylengths=1.5):
+                 jump_audit_bodylengths=1.5, activity_threshold_bl=None,
+                 block_s=30.0):
         if not all(isfinite(float(v)) and float(v) > 0 for v in (window, interval)):
             raise ValueError('window and interval must be finite and positive')
         if not isfinite(min_fill) or not 0 < min_fill <= 1:
             raise ValueError('min_fill must be in (0,1]')
-        if smoothing not in ('raw', 'median3', 'median5'):
-            raise ValueError('smoothing must be raw, median3 or median5')
+        if smoothing not in ('raw', 'median3', 'median5', 'block30'):
+            raise ValueError('smoothing must be raw, median3, median5 or block30')
+        if activity_threshold_bl is not None and (
+                not isfinite(activity_threshold_bl) or activity_threshold_bl <= 0):
+            raise ValueError('activity_threshold_bl must be positive or None')
+        if not isfinite(block_s) or block_s < interval:
+            raise ValueError('block_s must be >= interval')
         if activity_threshold_px is not None and (
                 not isfinite(activity_threshold_px) or activity_threshold_px <= 0):
             raise ValueError('activity_threshold_px must be positive or None')
@@ -97,6 +124,8 @@ class InactivityModule:
         self.min_samples = max(2, ceil(min_fill * window / interval))
         self.max_gap_s = float(max_gap_s) if max_gap_s is not None else 3*self.interval
         self.smoothing = smoothing
+        self.threshold_bl = activity_threshold_bl
+        self.block_s = float(block_s)
         self.jump_audit_bodylengths = float(jump_audit_bodylengths)
         self.history = defaultdict(deque)
         self.body_lens = deque(maxlen=500)
@@ -146,15 +175,21 @@ class InactivityModule:
                          for a,b in zip(coords,coords[1:])]
             raw_activity = sum(raw_steps)
             max_raw_step = max(raw_steps,default=0.0)
-            size = {'raw':1,'median3':3,'median5':5}[self.smoothing]
-            selected_coords = _median_filtered(coords,size)
+            if self.smoothing == 'block30':
+                selected_coords = _block_means(recent, self.block_s)
+            else:
+                size = {'raw':1,'median3':3,'median5':5}[self.smoothing]
+                selected_coords = _median_filtered(coords,size)
             filtered_steps = [hypot(b[0]-a[0],b[1]-a[1])
                               for a,b in zip(selected_coords,selected_coords[1:])]
             activity_px = sum(filtered_steps)
             if eligible:
                 eligible_activity_by_id_px[tid] = activity_px
             activity_bl = activity_px/body_len if body_len else None
-            activity_ok = activity_px < self.threshold_px if self.threshold_px is not None else None
+            if self.threshold_bl is not None:
+                activity_ok = (activity_bl < self.threshold_bl) if activity_bl is not None else None
+            else:
+                activity_ok = activity_px < self.threshold_px if self.threshold_px is not None else None
             prediction = int(eligible and activity_ok) if activity_ok is not None else None
             if prediction:
                 inactive.append(tid)
@@ -181,6 +216,11 @@ class InactivityModule:
                     '' if jump_suspect is None else jump_suspect,
                     f(activity_px-raw_activity),
                     f(activity_px),  # cumulative_activity_level_px (same selected score)
+                    f(self.threshold_bl),
+                    f(_path_length(_block_means(recent, self.block_s))/body_len) if body_len else '',
+                    f(max(max(c[0] for c in coords)-min(c[0] for c in coords),
+                          max(c[1] for c in coords)-min(c[1] for c in coords))/body_len)
+                    if body_len and coords else '',
                 ])
         return InactivitySample(body_len,inactive,len(self.history),
                                 audit_rows,eligible_activity_by_id_px)

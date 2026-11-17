@@ -142,3 +142,49 @@ With the rounded positions in your submitted CSVs:
 
 These are descriptive SAME-DAY observations, not an independent performance
 validation or a recommendation to publish the 450 px threshold.
+
+OPTION A, block30 MODE (added 17 Nov 2026; now the runner's default)
+====================================================================
+Why the 360 -> 450 px change is not kept as the default
+  * It was set on Day12_repaired.mp4, whose clock is stretched (its "30 min" is
+    about 22 real minutes; see video/FPS_NOTE.txt). There bird 15 scores 446 px,
+    4 px under 450. On the ORIGINAL mkv bird 15 scores 551 px, over 450.
+  * With --max-gap-s 6 no bird is ever eligible on the original mkv (every bird
+    has at least one 8 s detector gap), so the alert cannot fire at all.
+  * A px sum adds detector jitter once per picture, so the same still bird scores
+    551 / 373 / 302 px at 2 / 4 / 6 s sampling (the Pi samples every 3 s), and px
+    mean different body lengths as the birds grow.
+
+What block30 does
+  Average each bird's centre over 30-s blocks (removes jitter), sum the path between
+  block means, divide by the flock's median body length. Inactive if the 30-min
+  activity < --activity-threshold-bl (default 4.0, PROVISIONAL). Defaults with
+  block30: --min-fill 0.8, --max-gap-s 60. The audit CSV also has range_bl (the Pi's
+  rule: largest x/y range in body lengths) so both rules can be compared.
+  --smoothing raw/median3/median5 keeps the old px rule and old defaults exactly.
+
+Replays of existing runs (replay_broilernet_smoothed_from_csv.py, same tracks)
+  Day 12, ORIGINAL mkv (results/Day12_original_15fps_broilernet450):
+    old median3 450 px, min-fill 0.95, gap 6 s : eligible IDs none, no alert
+    block30 4.0 BL                              : 15 eligible IDs; only ID 15 flagged,
+      at 30:00 (1.79 BL; next lowest 6.92 BL)
+  Day 6 (results/D6broilernet450):
+    old median3 450 px                          : 10 eligible, no alert
+    block30 4.0 BL                              : 23 eligible; ID 2 flagged 30.0-44.7 min
+      (2.16 BL, range 1.07 BL; next lowest 5.53 BL). ID 2 sat still for ~25 min, then
+      shifted about one body length: either a resting bird that shuffled or a number
+      passed to a neighbour. CHECK IT ON THE DAY 6 VIDEO before counting it either way.
+
+How to use it
+  block30 tolerates one small shuffle; the Pi's range rule (0.5 BL) does not. Use the
+  range rule for the 30-min alert and block30 as a "low activity" signal next to it,
+  until a >= 30 min annotation on the original video says otherwise. Choose the
+  threshold on one day and test it on another.
+
+  python ".\hybridv2 behavior validation\run_behavior_system_broilernet_smoothed.py" `
+    --source "..\Videosamanok\Day_12_2026-09-08_0600_to_0700.mkv" `
+    --weights "..\runs\broiler_yolo11n\weights\best.pt" `
+    --tracker ".\configs\bytetrack_broiler.yaml" --zones ".\configs\feeding_zones.json" `
+    --interval 2 --window 1800 `
+    --inactivity-observations-csv ".\results\day12_block30\observations.csv" `
+    --log-csv ".\results\day12_block30\system_log.csv"
